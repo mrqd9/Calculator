@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<!-- 🔒 Prevent zoom & scaling -->
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1,
+               maximum-scale=1,
+               user-scalable=no">
+
+<!-- 📱 PWA / Fullscreen -->
+<meta name="theme-color" content="#2a2a2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+
+<title>Billing Calculator</title>
+
+<style>
+/* 🔒 LOCK SCREEN */
+html,body{
+  margin:0;
+  padding:0;
+  height:100%;
+  overflow:hidden;
+  touch-action:manipulation;
+  background:#1b1b1b;
+  font-family:system-ui
+}
+
+.calc{
+  height:100vh;
+  background:#2a2a2a;
+  padding:14px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+}
+
+/* DISPLAY */
+.display{
+  background:#cfd6c8;
+  flex:1;
+  border-radius:6px;
+  padding:14px;
+  margin-bottom:12px;
+  display:flex;
+  flex-direction:column
+}
+
+.history{
+  flex:1;
+  overflow:hidden;
+  font-size:20px;
+  color:#333;
+  text-align:right;
+  white-space:pre-line;
+  padding:0 8px;
+}
+
+.separator{
+  height:2px;
+  background:#999;
+  margin:8px 0
+}
+
+.live{
+  font-size:24px;
+  text-align:right;
+  color:#333;
+  min-height:32px;
+  padding:0 8px;
+}
+
+/* GRAND TOTAL – CLEAN CENTER */
+.total-wrap{
+  display:flex;
+  justify-content:center;
+}
+.total{
+  width:100%;
+  font-size:32px;
+  font-weight:bold;
+  text-align:center;
+  color:#000;
+  background:none;
+  border:none;
+}
+
+/* TOTAL ANIMATION */
+@keyframes totalFlash{
+  0%{transform:scale(1.03)}
+  100%{transform:scale(1)}
+}
+.total.flash{
+  animation:totalFlash .25s ease-out;
+}
+
+/* BUTTONS */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+button{
+  height:56px;
+  border:0;
+  border-radius:6px;
+  font-size:22px;
+  background:#444;
+  color:#fff;
+}
+.num{background:#5a5a5a}
+.op{background:#5c5c5c}
+.ac{background:#c14a9a}
+.eq{
+  grid-column:span 2;
+  background:#6a6a6a;
+  font-size:26px
+}
+button:active{transform:scale(.96)}
+</style>
+</head>
+
+<body>
+
+<div class="calc">
+  <div class="display">
+    <div id="history" class="history"></div>
+
+    <div class="separator"></div>
+
+    <div id="live" class="live"></div>
+
+    <div class="separator"></div>
+
+    <div class="total-wrap">
+      <div id="total" class="total">0.00</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <button class="ac" onclick="clearAll()">AC</button>
+    <button class="op" onclick="back()">⌫</button>
+    <button class="op" onclick="applyPercent()">%</button>
+    <button class="op" onclick="setOp('÷')">÷</button>
+
+    <button class="num" onclick="digit('7')">7</button>
+    <button class="num" onclick="digit('8')">8</button>
+    <button class="num" onclick="digit('9')">9</button>
+    <button class="op" onclick="setOp('+')">+</button>
+
+    <button class="num" onclick="digit('4')">4</button>
+    <button class="num" onclick="digit('5')">5</button>
+    <button class="num" onclick="digit('6')">6</button>
+    <button class="op" onclick="setOp('-')">−</button>
+
+    <button class="num" onclick="digit('1')">1</button>
+    <button class="num" onclick="digit('2')">2</button>
+    <button class="num" onclick="digit('3')">3</button>
+    <button class="op" onclick="setOp('×')">×</button>
+
+    <button class="num" onclick="digit('.')">.</button>
+    <button class="num" onclick="digit('0')">0</button>
+    <button class="eq" onclick="enter()">ENTER</button>
+  </div>
+</div>
+
+<script>
+let historyEl=document.getElementById("history");
+let liveEl=document.getElementById("live");
+let totalEl=document.getElementById("total");
+
+let expr="", originalExpr="", grandTotal=0;
+
+function clean(n){return Number(parseFloat(n).toFixed(10));}
+function updateLive(t=expr){liveEl.innerText=t;}
+function currentNumber(){let p=expr.split(" ");return p[p.length-1];}
+
+function digit(d){
+  let c=currentNumber();
+  if(d==="."&&c.includes("."))return;
+  let dig=c.replace("-","").replace(".","");
+  if(d!=="."&&dig.length>=12)return;
+  expr+=d; originalExpr+=d; updateLive();
+}
+
+function setOp(op){
+  if(expr===""&&op==="-"){expr="-";originalExpr="-";updateLive();return;}
+  if(expr.endsWith(" ")){
+    expr=expr.slice(0,-3)+" "+op+" ";
+    originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
+    updateLive();return;
+  }
+  expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive();
+}
+
+function applyPercent(){
+  let p=expr.trim().split(" "); if(p.length<3)return;
+  let A=parseFloat(p[0]), op=p[1], B=parseFloat(p[2]);
+  originalExpr+=" %";
+  let v;
+  if(op==="+"||op==="-"||op==="−"){v=A*B/100; expr=`${A} ${op} ${v}`;}
+  else if(op==="×"){v=B/100; expr=`${A} × ${v}`;}
+  else if(op==="÷"){v=B/100; expr=`${A} ÷ ${v}`;}
+  updateLive(originalExpr);
+}
+
+function evaluate(e){
+  e=e.replace(/×/g,"*").replace(/÷/g,"/");
+  return clean(Function("return "+e)());
+}
+
+function enter(){
+  if(expr===""||expr==="−"||expr==="-" )return;
+  let r; try{r=evaluate(expr);}catch{updateLive("Error");return;}
+  historyEl.innerText+=`${originalExpr} = ${r}\n`;
+  grandTotal=clean(grandTotal+r);
+  totalEl.innerText=grandTotal.toFixed(2);
+  totalEl.classList.remove("flash"); void totalEl.offsetWidth; totalEl.classList.add("flash");
+  expr=""; originalExpr=""; updateLive("");
+}
+
+function back(){expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1); updateLive();}
+function clearAll(){expr="";originalExpr="";grandTotal=0;historyEl.innerText="";updateLive("");totalEl.innerText="0.00";}
+</script>
+
+</body>
+</html>
