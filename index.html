@@ -63,12 +63,15 @@ html,body{
   font-variant-numeric: tabular-nums;
 }
 
+/* ===== HISTORY ROW ===== */
 .h-row{
   display:grid;
-  grid-template-columns:1fr 120px;
+  grid-template-columns:1fr 160px;   /* wider subtotal */
   padding:3px 5px;
   border-radius:4px;
 }
+
+/* Zebra striping */
 .h-row:nth-child(odd){
   background:rgba(90,120,100,0.10);
 }
@@ -76,26 +79,34 @@ html,body{
   background:rgba(120,90,100,0.10);
 }
 
+/* Expression (left) */
 .h-exp{
   text-align:right;
-  padding-right:8px;
+  padding-right:10px;
   opacity:.85;
   word-break:break-word;
 }
+
+/* Result (right) */
 .h-res{
   text-align:right;
   font-weight:600;
+  padding-left:10px;
+  border-left:1px solid rgba(0,0,0,0.18); /* 👈 FAINT VERTICAL DIVIDER */
 }
+
 .h-row.negative .h-res{
   color:#b00020;
 }
 
+/* ===== SEPARATORS ===== */
 .separator{
   height:2px;
   background:#999;
   margin:6px 0;
 }
 
+/* ===== LIVE INPUT ===== */
 .live{
   font-size:22px;
   min-height:28px;
@@ -104,6 +115,7 @@ html,body{
   color:#333;
 }
 
+/* ===== GRAND TOTAL ===== */
 .total{
   font-size:32px;
   font-weight:bold;
@@ -141,6 +153,7 @@ button{
 }
 button:active{transform:scale(.96)}
 
+/* ===== LANDSCAPE BLOCK ===== */
 @media (orientation: landscape){
   body::before{
     content:"Rotate phone to vertical mode";
@@ -162,14 +175,21 @@ button:active{transform:scale(.96)}
 <body>
 
 <div class="calc">
+
+  <!-- DISPLAY -->
   <div class="display">
     <div id="history" class="history"></div>
+
     <div class="separator"></div>
+
     <div id="live" class="live"></div>
+
     <div class="separator"></div>
+
     <div id="total" class="total">0.00</div>
   </div>
 
+  <!-- KEYS -->
   <div class="keys">
     <button class="ac" onclick="clearAll()">AC</button>
     <button class="op" onclick="back()">⌫</button>
@@ -195,6 +215,7 @@ button:active{transform:scale(.96)}
     <button class="num" onclick="digit('0')">0</button>
     <button class="eq" onclick="enter()">⏎ =</button>
   </div>
+
 </div>
 
 <script>
@@ -204,7 +225,7 @@ let totalEl=document.getElementById("total");
 
 let expr="", originalExpr="", grandTotal=0;
 
-/* ===== INDIAN FORMATTER ===== */
+/* Indian number formatter */
 function formatIN(n){
   if(n===""||n==="-" ) return n;
   let x=Number(n);
@@ -267,7 +288,9 @@ function enter(){
 
   let row=document.createElement("div");
   row.className="h-row"+(r<0?" negative":"");
-  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${formatIN(r)}</span>`;
+  row.innerHTML=
+    `<span class="h-exp">${originalExpr} =</span>
+     <span class="h-res">${formatIN(r)}</span>`;
   historyEl.appendChild(row);
   historyEl.scrollTop=historyEl.scrollHeight;
 
