@@ -42,7 +42,7 @@ html,body{
   flex:0 0 63%;
   min-height:0;
   background:#cfd6c8;
-  border-radius:6px;
+  border-radius:8px;
   padding:12px;
   box-sizing:border-box;
   display:flex;
@@ -57,29 +57,29 @@ html,body{
   overflow-x:hidden;
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:2px;                     /* ⬅️ reduced gap */
   padding:0 6px;
   font-size:18px;
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== HISTORY ROW ===== */
+/* Capsule rows */
 .h-row{
   display:grid;
-  grid-template-columns:1fr 160px;   /* wider subtotal */
-  padding:3px 5px;
-  border-radius:4px;
+  grid-template-columns:1fr 160px;
+  padding:5px 10px;
+  border-radius:999px;         /* ⬅️ capsule */
+  background:rgba(0,0,0,0.05);
 }
 
-/* Zebra striping */
+/* zebra tint */
 .h-row:nth-child(odd){
-  background:rgba(90,120,100,0.10);
+  background:rgba(90,120,100,0.12);
 }
 .h-row:nth-child(even){
   background:rgba(120,90,100,0.10);
 }
 
-/* Expression (left) */
 .h-exp{
   text-align:right;
   padding-right:10px;
@@ -87,12 +87,11 @@ html,body{
   word-break:break-word;
 }
 
-/* Result (right) */
 .h-res{
   text-align:right;
   font-weight:600;
   padding-left:10px;
-  border-left:1px solid rgba(0,0,0,0.18); /* 👈 FAINT VERTICAL DIVIDER */
+  border-left:1px solid rgba(0,0,0,0.18);
 }
 
 .h-row.negative .h-res{
@@ -129,29 +128,42 @@ html,body{
   flex:0 0 37%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:6px;
+  gap:4px;                     /* ⬅️ reduced gap */
   align-content:start;
-  margin-top:8px;
+  margin-top:6px;
 }
 
+/* ===== BUTTONS ===== */
 button{
   height:56px;
   border:0;
-  border-radius:7px;
-  font-size:24px;
-  font-weight:bold;
+  border-radius:14px;          /* ⬅️ rounder */
+  font-size:26px;              /* ⬅️ bigger text */
+  font-weight:700;
   background:#444;
   color:#fff;
+  transition:
+    transform .08s ease,
+    box-shadow .08s ease,
+    background .08s ease;
 }
+
+/* light glow on active */
+button:active{
+  transform:scale(.96);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.15),
+    0 0 10px rgba(255,255,255,.25);
+}
+
 .num{background:#5a5a5a}
 .op{background:#5c5c5c}
 .ac{background:#c14a9a}
 .eq{
   grid-column:span 2;
   background:#6a6a6a;
-  font-size:26px;
+  font-size:28px;
 }
-button:active{transform:scale(.96)}
 
 /* ===== LANDSCAPE BLOCK ===== */
 @media (orientation: landscape){
@@ -176,44 +188,38 @@ button:active{transform:scale(.96)}
 
 <div class="calc">
 
-  <!-- DISPLAY -->
   <div class="display">
     <div id="history" class="history"></div>
-
     <div class="separator"></div>
-
     <div id="live" class="live"></div>
-
     <div class="separator"></div>
-
     <div id="total" class="total">0.00</div>
   </div>
 
-  <!-- KEYS -->
   <div class="keys">
-    <button class="ac" onclick="clearAll()">AC</button>
-    <button class="op" onclick="back()">⌫</button>
-    <button class="op" onclick="applyPercent()">%</button>
-    <button class="op" onclick="setOp('÷')">÷</button>
+    <button class="ac" onclick="tap(clearAll)">AC</button>
+    <button class="op" onclick="tap(back)">⌫</button>
+    <button class="op" onclick="tap(applyPercent)">%</button>
+    <button class="op" onclick="tap(()=>setOp('÷'))">÷</button>
 
-    <button class="num" onclick="digit('7')">7</button>
-    <button class="num" onclick="digit('8')">8</button>
-    <button class="num" onclick="digit('9')">9</button>
-    <button class="op" onclick="setOp('+')">+</button>
+    <button class="num" onclick="tap(()=>digit('7'))">7</button>
+    <button class="num" onclick="tap(()=>digit('8'))">8</button>
+    <button class="num" onclick="tap(()=>digit('9'))">9</button>
+    <button class="op" onclick="tap(()=>setOp('+'))">+</button>
 
-    <button class="num" onclick="digit('4')">4</button>
-    <button class="num" onclick="digit('5')">5</button>
-    <button class="num" onclick="digit('6')">6</button>
-    <button class="op" onclick="setOp('-')">−</button>
+    <button class="num" onclick="tap(()=>digit('4'))">4</button>
+    <button class="num" onclick="tap(()=>digit('5'))">5</button>
+    <button class="num" onclick="tap(()=>digit('6'))">6</button>
+    <button class="op" onclick="tap(()=>setOp('-'))">−</button>
 
-    <button class="num" onclick="digit('1')">1</button>
-    <button class="num" onclick="digit('2')">2</button>
-    <button class="num" onclick="digit('3')">3</button>
-    <button class="op" onclick="setOp('×')">×</button>
+    <button class="num" onclick="tap(()=>digit('1'))">1</button>
+    <button class="num" onclick="tap(()=>digit('2'))">2</button>
+    <button class="num" onclick="tap(()=>digit('3'))">3</button>
+    <button class="op" onclick="tap(()=>setOp('×'))">×</button>
 
-    <button class="num" onclick="digit('.')">.</button>
-    <button class="num" onclick="digit('0')">0</button>
-    <button class="eq" onclick="enter()">⏎ =</button>
+    <button class="num" onclick="tap(()=>digit('.'))">.</button>
+    <button class="num" onclick="tap(()=>digit('0'))">0</button>
+    <button class="eq" onclick="tap(enter)">⏎ =</button>
   </div>
 
 </div>
@@ -224,6 +230,12 @@ let liveEl=document.getElementById("live");
 let totalEl=document.getElementById("total");
 
 let expr="", originalExpr="", grandTotal=0;
+
+/* light vibration wrapper */
+function tap(fn){
+  if(navigator.vibrate) navigator.vibrate(20);
+  fn();
+}
 
 /* Indian number formatter */
 function formatIN(n){
@@ -237,10 +249,7 @@ function clean(n){return Number(parseFloat(n).toFixed(10));}
 
 function updateLive(){
   let parts=expr.split(" ");
-  let out=parts.map(p=>{
-    return isNaN(p)?p:formatIN(p);
-  }).join(" ");
-  liveEl.innerText=out;
+  liveEl.innerText=parts.map(p=>isNaN(p)?p:formatIN(p)).join(" ");
 }
 
 function currentNumber(){
