@@ -18,7 +18,7 @@
 <title>Billing Calculator</title>
 
 <style>
-/* ===== BASE LOCK ===== */
+/* ===== BASE ===== */
 html,body{
   margin:0;
   height:100%;
@@ -30,28 +30,25 @@ html,body{
 
 .calc{
   height:100vh;
-  background:#2a2a2a;
   padding:12px;
   box-sizing:border-box;
+  background:#2a2a2a;
   display:flex;
   flex-direction:column;
 }
 
-/* ===== DISPLAY (RESPONSIVE FIXED RATIO) ===== */
+/* ===== DISPLAY : 60% ===== */
 .display{
-  flex:0 0 62%;
-  min-height:320px;
-  max-height:420px;
+  flex:0 0 60%;
   background:#cfd6c8;
   border-radius:6px;
   padding:12px;
   box-sizing:border-box;
   display:flex;
   flex-direction:column;
-  margin-bottom:10px;
 }
 
-/* ===== HISTORY (SCROLL ONLY) ===== */
+/* HISTORY (SCROLL ONLY HERE) */
 .history{
   flex:1;
   overflow-y:auto;
@@ -59,24 +56,23 @@ html,body{
   display:flex;
   flex-direction:column;
   gap:4px;
-  font-size:20px;
   padding:0 6px;
+  font-size:20px;
   font-variant-numeric: tabular-nums;
 }
 
-/* Zebra striping – greenish grey */
+/* Zebra rows */
 .h-row{
   display:grid;
   grid-template-columns:1fr 120px;
-  align-items:baseline;
   padding:3px 5px;
   border-radius:4px;
 }
 .h-row:nth-child(odd){
-  background:rgba(90,120,100,0.1);
+  background:rgba(90,120,100,0.15);
 }
 .h-row:nth-child(even){
-  background:rgba(120,90,100,0.1);
+  background:rgba(120,90,100,0.10);
 }
 
 .h-exp{
@@ -93,23 +89,23 @@ html,body{
   color:#b00020;
 }
 
-/* ===== SEPARATORS ===== */
+/* SEPARATORS */
 .separator{
   height:2px;
   background:#999;
   margin:6px 0;
 }
 
-/* ===== LIVE INPUT ===== */
+/* LIVE INPUT */
 .live{
   font-size:24px;
-  text-align:right;
   min-height:30px;
+  text-align:right;
   padding:0 6px;
   color:#333;
 }
 
-/* ===== GRAND TOTAL ===== */
+/* GRAND TOTAL */
 .total{
   font-size:32px;
   font-weight:bold;
@@ -118,14 +114,14 @@ html,body{
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== BUTTON AREA (RESPONSIVE FIXED RATIO) ===== */
+/* ===== KEYS : 40% ===== */
 .keys{
-  flex:0 0 38%;
-  min-height:300px;
-  max-height:420px;
+  flex:0 0 40%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:8px;
+  gap:6px;
+  align-content:start;
+  margin-top:8px;
 }
 
 button{
@@ -146,7 +142,7 @@ button{
 }
 button:active{transform:scale(.96)}
 
-/* ===== LANDSCAPE LOCK SCREEN ===== */
+/* ===== LANDSCAPE BLOCK ===== */
 @media (orientation: landscape){
   body::before{
     content:"Rotate phone to vertical mode";
