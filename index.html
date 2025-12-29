@@ -3,14 +3,12 @@
 <head>
 <meta charset="UTF-8">
 
-<!-- 🔒 Prevent zoom & scaling -->
 <meta name="viewport"
       content="width=device-width,
                initial-scale=1,
                maximum-scale=1,
                user-scalable=no">
 
-<!-- 📱 PWA / Fullscreen -->
 <meta name="theme-color" content="#2a2a2a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,15 +17,13 @@
 <title>Billing Calculator</title>
 
 <style>
-/* 🔒 LOCK SCREEN */
 html,body{
   margin:0;
-  padding:0;
   height:100%;
   overflow:hidden;
-  touch-action:manipulation;
   background:#1b1b1b;
-  font-family:system-ui
+  font-family:system-ui;
+  touch-action:manipulation;
 }
 
 .calc{
@@ -47,46 +43,81 @@ html,body{
   padding:14px;
   margin-bottom:12px;
   display:flex;
-  flex-direction:column
+  flex-direction:column;
 }
 
+/* HISTORY (LEDGER STYLE) */
 .history{
   flex:1;
   overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
   font-size:20px;
-  color:#333;
-  text-align:right;
-  white-space:pre-line;
-  padding:0 8px;
+  padding:0 6px;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Zebra rows */
+.h-row{
+  display:grid;
+  grid-template-columns: 1fr 120px;
+  align-items:baseline;
+  border-radius:4px;
+  padding:2px 4px;
+}
+
+.h-row:nth-child(odd){
+  background:rgba(0,0,0,0.06);
+}
+.h-row:nth-child(even){
+  background:rgba(0,0,0,0.03);
+}
+
+.h-exp{
+  text-align:right;
+  padding-right:8px;
+  opacity:0.85;
+  word-break:break-word;
+}
+
+.h-res{
+  text-align:right;
+  font-weight:600;
+}
+
+.h-row.negative .h-res{
+  color:#b00020;
+}
+
+/* SEPARATORS */
 .separator{
   height:2px;
   background:#999;
-  margin:8px 0
+  margin:8px 0;
 }
 
+/* TYPING */
 .live{
   font-size:24px;
   text-align:right;
-  color:#333;
   min-height:32px;
-  padding:0 8px;
+  padding:0 6px;
+  color:#333;
 }
 
-/* GRAND TOTAL – CLEAN CENTER */
+/* GRAND TOTAL */
 .total-wrap{
   display:flex;
   justify-content:center;
 }
 .total{
   width:100%;
-  font-size:32px;
+  font-size:34px;
   font-weight:bold;
   text-align:center;
   color:#000;
-  background:none;
-  border:none;
+  font-variant-numeric: tabular-nums;
 }
 
 /* TOTAL ANIMATION */
@@ -118,7 +149,7 @@ button{
 .eq{
   grid-column:span 2;
   background:#6a6a6a;
-  font-size:26px
+  font-size:26px;
 }
 button:active{transform:scale(.96)}
 </style>
@@ -214,17 +245,33 @@ function evaluate(e){
 }
 
 function enter(){
-  if(expr===""||expr==="−"||expr==="-" )return;
+  if(expr===""||expr==="-"||expr==="−")return;
   let r; try{r=evaluate(expr);}catch{updateLive("Error");return;}
-  historyEl.innerText+=`${originalExpr} = ${r}\n`;
+
+  let row=document.createElement("div");
+  row.className="h-row"+(r<0?" negative":"");
+  row.innerHTML=`
+    <span class="h-exp">${originalExpr} =</span>
+    <span class="h-res">${r}</span>
+  `;
+  historyEl.appendChild(row);
+
   grandTotal=clean(grandTotal+r);
   totalEl.innerText=grandTotal.toFixed(2);
-  totalEl.classList.remove("flash"); void totalEl.offsetWidth; totalEl.classList.add("flash");
+  totalEl.classList.remove("flash");
+  void totalEl.offsetWidth;
+  totalEl.classList.add("flash");
+
   expr=""; originalExpr=""; updateLive("");
 }
 
 function back(){expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1); updateLive();}
-function clearAll(){expr="";originalExpr="";grandTotal=0;historyEl.innerText="";updateLive("");totalEl.innerText="0.00";}
+function clearAll(){
+  expr=""; originalExpr=""; grandTotal=0;
+  historyEl.innerHTML="";
+  updateLive("");
+  totalEl.innerText="0.00";
+}
 </script>
 
 </body>
