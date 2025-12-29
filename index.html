@@ -30,7 +30,7 @@ html,body{
   box-sizing:border-box;
 }
 
-/* ===== DISPLAY : 60% ===== */
+/* DISPLAY 60% */
 .display{
   flex:0 0 60%;
   min-height:0;
@@ -39,7 +39,6 @@ html,body{
   padding:12px;
   display:flex;
   flex-direction:column;
-  box-sizing:border-box;
 }
 
 /* HISTORY */
@@ -52,15 +51,12 @@ html,body{
   gap:4px;
 }
 
-/* HISTORY ROW WRAPPER */
+/* ROW */
 .h-wrap{
   display:flex;
   align-items:center;
   gap:6px;
-  flex:0 0 auto;
 }
-
-/* DELETE ICON */
 .h-del{
   width:20px;
   height:20px;
@@ -72,10 +68,7 @@ html,body{
   display:flex;
   align-items:center;
   justify-content:center;
-  cursor:pointer;
 }
-
-/* CAPSULE */
 .h-row{
   flex:1;
   display:grid;
@@ -87,34 +80,14 @@ html,body{
 .h-wrap:nth-child(even) .h-row{
   background:rgba(120,90,100,.10);
 }
-
 .h-exp{text-align:right; padding-right:10px; opacity:.85}
-.h-res{
-  text-align:right;
-  font-weight:600;
-  padding-left:10px;
-  border-left:1px solid rgba(0,0,0,.18);
-}
-.h-row.negative .h-res{color:#b00020}
+.h-res{text-align:right; font-weight:600; padding-left:10px; border-left:1px solid rgba(0,0,0,.18)}
 
-.separator{
-  height:2px;
-  background:#999;
-  margin:6px 0;
-}
+.separator{height:2px;background:#999;margin:6px 0}
+.live{font-size:22px;text-align:center}
+.total{font-size:32px;font-weight:bold;text-align:right}
 
-.live{
-  font-size:22px;
-  text-align:center;
-}
-
-.total{
-  font-size:32px;
-  font-weight:bold;
-  text-align:right;
-}
-
-/* ===== KEYS : 40% ===== */
+/* KEYS 40% */
 .keys{
   flex:0 0 40%;
   display:grid;
@@ -123,7 +96,6 @@ html,body{
   margin-top:6px;
 }
 
-/* BUTTONS */
 button{
   height:54px;
   border:0;
@@ -133,13 +105,11 @@ button{
   background:#444;
   color:#fff;
 }
-
 button.active{
   transform:scale(.96);
   box-shadow:0 0 0 2px rgba(255,255,255,.25),
              0 0 14px rgba(255,255,255,.45);
 }
-
 .num{background:#5a5a5a}
 .op{background:#5c5c5c}
 .ac{background:#c14a9a}
@@ -163,7 +133,7 @@ button.active{
     <button class="ac" onclick="press(this,clearAll)">AC</button>
     <button class="op" onclick="press(this,back)">⌫</button>
     <button class="op" onclick="press(this,applyPercent)">%</button>
-    <button class="op" onclick="press(this,()=>setOp('÷'))">÷</button>
+    <button class="op" onclick="press(this,()=>setOp('/'))">÷</button>
 
     <button class="num" onclick="press(this,()=>digit('7'))">7</button>
     <button class="num" onclick="press(this,()=>digit('8'))">8</button>
@@ -173,12 +143,12 @@ button.active{
     <button class="num" onclick="press(this,()=>digit('4'))">4</button>
     <button class="num" onclick="press(this,()=>digit('5'))">5</button>
     <button class="num" onclick="press(this,()=>digit('6'))">6</button>
-    <button class="op" onclick="press(this,()=>setOp('−'))">−</button>
+    <button class="op" onclick="press(this,()=>setOp('-'))">−</button>
 
     <button class="num" onclick="press(this,()=>digit('1'))">1</button>
     <button class="num" onclick="press(this,()=>digit('2'))">2</button>
     <button class="num" onclick="press(this,()=>digit('3'))">3</button>
-    <button class="op" onclick="press(this,()=>setOp('×'))">×</button>
+    <button class="op" onclick="press(this,()=>setOp('*'))">×</button>
 
     <button class="num" onclick="press(this,()=>digit('.'))">.</button>
     <button class="num" onclick="press(this,()=>digit('0'))">0</button>
@@ -194,67 +164,53 @@ let totalEl=total;
 
 let expr="", originalExpr="", grandTotal=0;
 
-/* ---------- helpers ---------- */
+/* vibration only if action */
 function press(btn, fn){
   btn.classList.add("active");
   let ok = fn();
-  if(ok && navigator.vibrate) navigator.vibrate(30);
+  if(ok && navigator.vibrate) navigator.vibrate(20);
   setTimeout(()=>btn.classList.remove("active"),120);
 }
 
+/* helpers */
 function formatIN(n){
   if(n===""||n==="-" ) return n;
   return Number(n).toLocaleString("en-IN",{maximumFractionDigits:10});
 }
-
 function updateLive(){
-  liveEl.innerText=expr.split(" ").map(p=>isNaN(p)?p:formatIN(p)).join(" ");
+  liveEl.innerText = expr.split(" ").map(p=>isNaN(p)?p:formatIN(p)).join(" ");
 }
 
-function safeEval(e){
-  let s = e.replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-");
-  return Function("return "+s)();
-}
-
-/* ---------- input ---------- */
+/* input */
 function currentNumber(){
   let p=expr.split(" ");
   return p[p.length-1];
 }
-
 function digit(d){
   let c=currentNumber();
-  if(d==="."&&c.includes(".")) return false;
+  if(d==="." && c.includes(".")) return false;
   let dig=c.replace("-","").replace(".","");
-  if(d!=="."&&dig.length>=12) return false;
+  if(d!=="." && dig.length>=12) return false;
   expr+=d; originalExpr+=d; updateLive(); return true;
 }
-
 function setOp(op){
-  if(expr===""&&op==="−"){expr="-";originalExpr="-";updateLive();return true;}
-  if(expr.endsWith(" ")){
-    expr=expr.slice(0,-3)+" "+op+" ";
-    originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
-    updateLive();return true;
-  }
-  if(expr==="") return false;
-  expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive();return true;
+  if(expr==="" && op==='-'){expr='-'; originalExpr='-'; updateLive(); return true;}
+  if(expr==="" || expr.endsWith(" ")) return false;
+  expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive(); return true;
 }
-
 function applyPercent(){
   let p=expr.trim().split(" ");
   if(p.length<3) return false;
   let A=+p[0], op=p[1], B=+p[2];
-  let v=(op==="+"||op==="−")?A*B/100:B/100;
-  expr=`${A} ${op} ${v}`; originalExpr+=" %";
-  updateLive();return true;
+  let v=(op==='+'||op==='-')?A*B/100:B/100;
+  expr=`${A} ${op} ${v}`; originalExpr+=" %"; updateLive(); return true;
 }
 
-/* ---------- ENTER ---------- */
+/* ENTER – simple & safe */
 function doEnter(){
-  if(expr==="") return false;
+  if(expr==="" || expr.endsWith(" ")) return false;
   let r;
-  try{ r = safeEval(expr); }
+  try{ r = eval(expr); }
   catch{ return false; }
 
   let wrap=document.createElement("div");
@@ -267,7 +223,7 @@ function doEnter(){
   del.onclick=()=>deleteRow(wrap);
 
   let row=document.createElement("div");
-  row.className="h-row"+(r<0?" negative":"");
+  row.className="h-row";
   row.innerHTML=`<span class="h-exp">${originalExpr} =</span>
                  <span class="h-res">${formatIN(r)}</span>`;
 
@@ -281,31 +237,30 @@ function doEnter(){
   return true;
 }
 
-/* ---------- delete ---------- */
+/* delete */
 function deleteRow(wrap){
   let v=parseFloat(wrap.dataset.value);
   grandTotal-=v;
   totalEl.innerText=formatIN(grandTotal.toFixed(2));
   wrap.remove();
-  if(navigator.vibrate) navigator.vibrate(30);
+  if(navigator.vibrate) navigator.vibrate(20);
 }
 
-/* ---------- misc ---------- */
+/* misc */
 function back(){
   if(expr==="") return false;
   expr=expr.slice(0,-1);
   originalExpr=originalExpr.slice(0,-1);
-  updateLive();return true;
+  updateLive(); return true;
 }
-
 function clearAll(){
-  if(expr===""&&historyEl.innerHTML==="") return false;
+  if(expr==="" && historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
   historyEl.innerHTML="";
   totalEl.innerText="0.00";
-  updateLive();return true;
+  updateLive(); return true;
 }
 </script>
 
 </body>
-</html>
+</html> 
