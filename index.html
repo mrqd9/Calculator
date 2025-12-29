@@ -37,10 +37,10 @@ html,body{
   flex-direction:column;
 }
 
-/* ===== DISPLAY : 60% (FIXED, NO EXPAND) ===== */
+/* ===== DISPLAY ===== */
 .display{
   flex:0 0 63%;
-  min-height:0;                 /* 🔑 CRITICAL FIX */
+  min-height:0;
   background:#cfd6c8;
   border-radius:6px;
   padding:12px;
@@ -49,10 +49,10 @@ html,body{
   flex-direction:column;
 }
 
-/* ===== HISTORY (SCROLLS HERE ONLY) ===== */
+/* ===== HISTORY ===== */
 .history{
   flex:1;
-  min-height:0;                 /* 🔑 SAFETY */
+  min-height:0;
   overflow-y:auto;
   overflow-x:hidden;
   display:flex;
@@ -63,7 +63,6 @@ html,body{
   font-variant-numeric: tabular-nums;
 }
 
-/* Zebra rows */
 .h-row{
   display:grid;
   grid-template-columns:1fr 120px;
@@ -91,14 +90,12 @@ html,body{
   color:#b00020;
 }
 
-/* ===== SEPARATORS ===== */
 .separator{
   height:2px;
   background:#999;
   margin:6px 0;
 }
 
-/* ===== LIVE INPUT ===== */
 .live{
   font-size:22px;
   min-height:28px;
@@ -107,7 +104,6 @@ html,body{
   color:#333;
 }
 
-/* ===== GRAND TOTAL ===== */
 .total{
   font-size:32px;
   font-weight:bold;
@@ -116,7 +112,7 @@ html,body{
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== KEYS : 40% ===== */
+/* ===== KEYS ===== */
 .keys{
   flex:0 0 37%;
   display:grid;
@@ -145,7 +141,6 @@ button{
 }
 button:active{transform:scale(.96)}
 
-/* ===== LANDSCAPE BLOCK ===== */
 @media (orientation: landscape){
   body::before{
     content:"Rotate phone to vertical mode";
@@ -167,21 +162,14 @@ button:active{transform:scale(.96)}
 <body>
 
 <div class="calc">
-
-  <!-- DISPLAY -->
   <div class="display">
     <div id="history" class="history"></div>
-
     <div class="separator"></div>
-
     <div id="live" class="live"></div>
-
     <div class="separator"></div>
-
     <div id="total" class="total">0.00</div>
   </div>
 
-  <!-- KEYS -->
   <div class="keys">
     <button class="ac" onclick="clearAll()">AC</button>
     <button class="op" onclick="back()">⌫</button>
@@ -207,7 +195,6 @@ button:active{transform:scale(.96)}
     <button class="num" onclick="digit('0')">0</button>
     <button class="eq" onclick="enter()">⏎ =</button>
   </div>
-
 </div>
 
 <script>
@@ -217,9 +204,28 @@ let totalEl=document.getElementById("total");
 
 let expr="", originalExpr="", grandTotal=0;
 
+/* ===== INDIAN FORMATTER ===== */
+function formatIN(n){
+  if(n===""||n==="-" ) return n;
+  let x=Number(n);
+  if(isNaN(x)) return n;
+  return x.toLocaleString("en-IN",{maximumFractionDigits:10});
+}
+
 function clean(n){return Number(parseFloat(n).toFixed(10));}
-function updateLive(t=expr){liveEl.innerText=t;}
-function currentNumber(){let p=expr.split(" ");return p[p.length-1];}
+
+function updateLive(){
+  let parts=expr.split(" ");
+  let out=parts.map(p=>{
+    return isNaN(p)?p:formatIN(p);
+  }).join(" ");
+  liveEl.innerText=out;
+}
+
+function currentNumber(){
+  let p=expr.split(" ");
+  return p[p.length-1];
+}
 
 function digit(d){
   let c=currentNumber();
@@ -247,7 +253,7 @@ function applyPercent(){
   if(op==="+"||op==="-"||op==="−"){v=A*B/100; expr=`${A} ${op} ${v}`;}
   else if(op==="×"){v=B/100; expr=`${A} × ${v}`;}
   else if(op==="÷"){v=B/100; expr=`${A} ÷ ${v}`;}
-  updateLive(originalExpr);
+  updateLive();
 }
 
 function evaluate(e){
@@ -261,21 +267,21 @@ function enter(){
 
   let row=document.createElement("div");
   row.className="h-row"+(r<0?" negative":"");
-  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${r}</span>`;
+  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${formatIN(r)}</span>`;
   historyEl.appendChild(row);
   historyEl.scrollTop=historyEl.scrollHeight;
 
   grandTotal=clean(grandTotal+r);
-  totalEl.innerText=grandTotal.toFixed(2);
+  totalEl.innerText=formatIN(grandTotal.toFixed(2));
 
-  expr=""; originalExpr=""; updateLive("");
+  expr=""; originalExpr=""; updateLive();
 }
 
 function back(){expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1); updateLive();}
 function clearAll(){
   expr=""; originalExpr=""; grandTotal=0;
   historyEl.innerHTML="";
-  updateLive("");
+  updateLive();
   totalEl.innerText="0.00";
 }
 </script>
