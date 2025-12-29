@@ -30,21 +30,25 @@ html,body{
 .calc{
   height:100vh;
   padding:12px;
+  box-sizing:border-box;
   background:#2a2a2a;
   display:flex;
   flex-direction:column;
 }
 
+/* DISPLAY */
 .display{
   flex:0 0 63%;
   min-height:0;
   background:#cfd6c8;
   border-radius:8px;
   padding:12px;
+  box-sizing:border-box;
   display:flex;
   flex-direction:column;
 }
 
+/* HISTORY */
 .history{
   flex:1;
   min-height:0;
@@ -54,6 +58,7 @@ html,body{
   gap:2px;
   padding:0 6px;
   font-size:18px;
+  font-variant-numeric: tabular-nums;
 }
 
 .h-row{
@@ -65,13 +70,39 @@ html,body{
 .h-row:nth-child(odd){background:rgba(90,120,100,.12)}
 .h-row:nth-child(even){background:rgba(120,90,100,.10)}
 
-.h-exp{text-align:right;padding-right:10px;opacity:.85}
-.h-res{text-align:right;font-weight:600;padding-left:10px;border-left:1px solid rgba(0,0,0,.18)}
+.h-exp{
+  text-align:right;
+  padding-right:10px;
+  opacity:.85;
+}
+.h-res{
+  text-align:right;
+  font-weight:600;
+  padding-left:10px;
+  border-left:1px solid rgba(0,0,0,.18);
+}
+.h-row.negative .h-res{color:#b00020}
 
-.separator{height:2px;background:#999;margin:6px 0}
-.live{font-size:22px;text-align:center}
-.total{font-size:32px;font-weight:bold;text-align:right}
+.separator{
+  height:2px;
+  background:#999;
+  margin:6px 0;
+}
 
+.live{
+  font-size:22px;
+  min-height:28px;
+  text-align:center;
+  color:#333;
+}
+
+.total{
+  font-size:32px;
+  font-weight:bold;
+  text-align:right;
+}
+
+/* KEYS */
 .keys{
   flex:0 0 37%;
   display:grid;
@@ -88,6 +119,7 @@ button{
   font-weight:700;
   background:#444;
   color:#fff;
+  transition:transform .08s, box-shadow .08s;
 }
 button:active{
   transform:scale(.96);
@@ -98,7 +130,23 @@ button:active{
 .num{background:#5a5a5a}
 .op{background:#5c5c5c}
 .ac{background:#c14a9a}
-.eq{grid-column:span 2;font-size:28px;background:#6a6a6a}
+.eq{grid-column:span 2; background:#6a6a6a}
+
+@media (orientation: landscape){
+  body::before{
+    content:"Rotate phone to vertical mode";
+    position:fixed;
+    inset:0;
+    background:#000;
+    color:#fff;
+    font-size:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+  }
+  .calc{display:none;}
+}
 </style>
 </head>
 
@@ -115,7 +163,7 @@ button:active{
   </div>
 
   <div class="keys">
-    <button class="ac" onclick="tap(clearAll)">AC</button>
+    <button class="ac" onclick="tap(clearAll,'strong')">AC</button>
     <button class="op" onclick="tap(back)">⌫</button>
     <button class="op" onclick="tap(applyPercent)">%</button>
     <button class="op" onclick="tap(()=>setOp('÷'))">÷</button>
@@ -137,7 +185,7 @@ button:active{
 
     <button class="num" onclick="tap(()=>digit('.'))">.</button>
     <button class="num" onclick="tap(()=>digit('0'))">0</button>
-    <button class="eq" onclick="tap(enter)">⏎ =</button>
+    <button class="eq" onclick="tap(enter,'enter')">⏎ =</button>
   </div>
 
 </div>
@@ -149,30 +197,39 @@ let totalEl=total;
 
 let expr="", originalExpr="", grandTotal=0;
 
-/* vibration only if action really happened */
-function tap(fn){
-  let acted = fn();
-  if(acted && navigator.vibrate){
-    navigator.vibrate(20);
-  }
+/* SMART HAPTICS */
+function vibrate(type){
+  if(!navigator.vibrate) return;
+  if(type==="strong") navigator.vibrate(80);
+  else if(type==="enter") navigator.vibrate(40);
+  else navigator.vibrate(20);
 }
 
-/* helpers */
+function tap(fn,type){
+  let acted=fn();
+  if(acted) vibrate(type);
+}
+
+/* FORMAT */
 function formatIN(n){
   if(n===""||n==="-" ) return n;
-  return Number(n).toLocaleString("en-IN",{maximumFractionDigits:10});
+  let x=Number(n);
+  if(isNaN(x)) return n;
+  return x.toLocaleString("en-IN",{maximumFractionDigits:10});
 }
+
 function clean(n){return Number(parseFloat(n).toFixed(10));}
 
 function updateLive(){
   liveEl.innerText=expr.split(" ").map(p=>isNaN(p)?p:formatIN(p)).join(" ");
 }
+
 function currentNumber(){
   let p=expr.split(" ");
   return p[p.length-1];
 }
 
-/* input */
+/* ACTIONS (return true/false) */
 function digit(d){
   let c=currentNumber();
   if(d==="."&&c.includes(".")) return false;
@@ -186,8 +243,9 @@ function setOp(op){
   if(expr.endsWith(" ")){
     expr=expr.slice(0,-3)+" "+op+" ";
     originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
-    updateLive();return true;
+    updateLive(); return true;
   }
+  if(expr==="") return false;
   expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive(); return true;
 }
 
@@ -196,47 +254,39 @@ function applyPercent(){
   if(p.length<3) return false;
   let A=parseFloat(p[0]), op=p[1], B=parseFloat(p[2]);
   originalExpr+=" %";
-  let v=(op==="+"||op==="-"||op==="−")?A*B/100:B/100;
+  let v;
+  if(op==="+"||op==="-"||op==="−") v=A*B/100;
+  else if(op==="×") v=B/100;
+  else if(op==="÷") v=B/100;
+  else return false;
   expr=`${A} ${op} ${v}`; updateLive(); return true;
-}
-
-function evaluate(e){
-  e=e.replace(/×/g,"*").replace(/÷/g,"/");
-  return clean(Function("return "+e)());
 }
 
 function enter(){
   if(expr===""||expr==="-"||expr==="−") return false;
-  let r; try{r=evaluate(expr);}catch{return false;}
-
+  let r; try{r=clean(Function("return "+expr.replace(/×/g,"*").replace(/÷/g,"/"))());}
+  catch{return false;}
   let row=document.createElement("div");
-  row.className="h-row";
-  row.innerHTML=`<span class="h-exp">${originalExpr} =</span>
-                 <span class="h-res">${formatIN(r)}</span>`;
+  row.className="h-row"+(r<0?" negative":"");
+  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${formatIN(r)}</span>`;
   historyEl.appendChild(row);
   historyEl.scrollTop=historyEl.scrollHeight;
-
   grandTotal=clean(grandTotal+r);
   totalEl.innerText=formatIN(grandTotal.toFixed(2));
-
-  expr=""; originalExpr=""; updateLive();
-  return true;
+  expr=""; originalExpr=""; updateLive(); return true;
 }
 
 function back(){
   if(expr==="") return false;
-  expr=expr.slice(0,-1);
-  originalExpr=originalExpr.slice(0,-1);
+  expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1);
   updateLive(); return true;
 }
 
 function clearAll(){
   if(expr===""&&historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
-  historyEl.innerHTML="";
-  updateLive();
-  totalEl.innerText="0.00";
-  return true;
+  historyEl.innerHTML=""; updateLive();
+  totalEl.innerText="0.00"; return true;
 }
 </script>
 
