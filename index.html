@@ -10,11 +10,6 @@
                maximum-scale=1,
                user-scalable=no">
 
-<meta name="theme-color" content="#2a2a2a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.json">
-
 <title>Billing Calculator</title>
 
 <style>
@@ -32,17 +27,19 @@ html,body{
   background:#2a2a2a;
   display:flex;
   flex-direction:column;
+  box-sizing:border-box;
 }
 
-/* DISPLAY */
+/* ===== DISPLAY : 60% ===== */
 .display{
-  flex:0 0 63%;
+  flex:0 0 60%;
   min-height:0;
   background:#cfd6c8;
   border-radius:8px;
   padding:12px;
   display:flex;
   flex-direction:column;
+  box-sizing:border-box;
 }
 
 /* HISTORY */
@@ -55,17 +52,18 @@ html,body{
   gap:4px;
 }
 
-/* ROW WRAPPER */
+/* HISTORY ROW WRAPPER */
 .h-wrap{
   display:flex;
   align-items:center;
   gap:6px;
+  flex:0 0 auto;
 }
 
 /* DELETE ICON */
 .h-del{
-  width:22px;
-  height:22px;
+  width:20px;
+  height:20px;
   border-radius:50%;
   background:#d64545;
   color:#fff;
@@ -75,9 +73,7 @@ html,body{
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  flex-shrink:0;
 }
-.h-del:active{transform:scale(.9)}
 
 /* CAPSULE */
 .h-row{
@@ -86,9 +82,11 @@ html,body{
   grid-template-columns:1fr 160px;
   padding:6px 12px;
   border-radius:999px;
+  background:rgba(90,120,100,.12);
 }
-.h-row:nth-child(odd){background:rgba(90,120,100,.12)}
-.h-row:nth-child(even){background:rgba(120,90,100,.10)}
+.h-wrap:nth-child(even) .h-row{
+  background:rgba(120,90,100,.10);
+}
 
 .h-exp{text-align:right; padding-right:10px; opacity:.85}
 .h-res{
@@ -99,20 +97,33 @@ html,body{
 }
 .h-row.negative .h-res{color:#b00020}
 
-.separator{height:2px;background:#999;margin:6px 0}
+.separator{
+  height:2px;
+  background:#999;
+  margin:6px 0;
+}
 
-.live{font-size:22px;text-align:center}
-.total{font-size:32px;font-weight:bold;text-align:right}
+.live{
+  font-size:22px;
+  text-align:center;
+}
 
-/* KEYS */
+.total{
+  font-size:32px;
+  font-weight:bold;
+  text-align:right;
+}
+
+/* ===== KEYS : 40% ===== */
 .keys{
-  flex:0 0 37%;
+  flex:0 0 40%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:2px;
   margin-top:6px;
 }
 
+/* BUTTONS */
 button{
   height:54px;
   border:0;
@@ -122,6 +133,7 @@ button{
   background:#444;
   color:#fff;
 }
+
 button.active{
   transform:scale(.96);
   box-shadow:0 0 0 2px rgba(255,255,255,.25),
@@ -132,7 +144,6 @@ button.active{
 .op{background:#5c5c5c}
 .ac{background:#c14a9a}
 .eq{grid-column:span 2;background:#6a6a6a}
-
 </style>
 </head>
 
@@ -149,7 +160,7 @@ button.active{
   </div>
 
   <div class="keys">
-    <button class="ac" onclick="press(this,clearAll,'strong')">AC</button>
+    <button class="ac" onclick="press(this,clearAll)">AC</button>
     <button class="op" onclick="press(this,back)">⌫</button>
     <button class="op" onclick="press(this,applyPercent)">%</button>
     <button class="op" onclick="press(this,()=>setOp('÷'))">÷</button>
@@ -162,7 +173,7 @@ button.active{
     <button class="num" onclick="press(this,()=>digit('4'))">4</button>
     <button class="num" onclick="press(this,()=>digit('5'))">5</button>
     <button class="num" onclick="press(this,()=>digit('6'))">6</button>
-    <button class="op" onclick="press(this,()=>setOp('-'))">−</button>
+    <button class="op" onclick="press(this,()=>setOp('−'))">−</button>
 
     <button class="num" onclick="press(this,()=>digit('1'))">1</button>
     <button class="num" onclick="press(this,()=>digit('2'))">2</button>
@@ -171,7 +182,7 @@ button.active{
 
     <button class="num" onclick="press(this,()=>digit('.'))">.</button>
     <button class="num" onclick="press(this,()=>digit('0'))">0</button>
-    <button class="eq" onclick="press(this,doEnter,'enter')">⏎ =</button>
+    <button class="eq" onclick="press(this,doEnter)">⏎ =</button>
   </div>
 
 </div>
@@ -183,33 +194,34 @@ let totalEl=total;
 
 let expr="", originalExpr="", grandTotal=0;
 
-/* ---------- UTIL ---------- */
-function vibrate(ms){
-  if(navigator.vibrate) navigator.vibrate(ms);
-}
-function press(btn, fn, type){
+/* ---------- helpers ---------- */
+function press(btn, fn){
   btn.classList.add("active");
   let ok = fn();
-  if(ok){
-    if(type==="strong") vibrate(80);
-    else if(type==="enter") vibrate(40);
-    else vibrate(20);
-  }
+  if(ok && navigator.vibrate) navigator.vibrate(30);
   setTimeout(()=>btn.classList.remove("active"),120);
 }
+
 function formatIN(n){
   if(n===""||n==="-" ) return n;
   return Number(n).toLocaleString("en-IN",{maximumFractionDigits:10});
 }
+
 function updateLive(){
   liveEl.innerText=expr.split(" ").map(p=>isNaN(p)?p:formatIN(p)).join(" ");
 }
 
-/* ---------- INPUT ---------- */
+function safeEval(e){
+  let s = e.replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-");
+  return Function("return "+s)();
+}
+
+/* ---------- input ---------- */
 function currentNumber(){
   let p=expr.split(" ");
   return p[p.length-1];
 }
+
 function digit(d){
   let c=currentNumber();
   if(d==="."&&c.includes(".")) return false;
@@ -217,8 +229,9 @@ function digit(d){
   if(d!=="."&&dig.length>=12) return false;
   expr+=d; originalExpr+=d; updateLive(); return true;
 }
+
 function setOp(op){
-  if(expr===""&&op==="-"){expr="-";originalExpr="-";updateLive();return true;}
+  if(expr===""&&op==="−"){expr="-";originalExpr="-";updateLive();return true;}
   if(expr.endsWith(" ")){
     expr=expr.slice(0,-3)+" "+op+" ";
     originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
@@ -227,11 +240,12 @@ function setOp(op){
   if(expr==="") return false;
   expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive();return true;
 }
+
 function applyPercent(){
   let p=expr.trim().split(" ");
   if(p.length<3) return false;
   let A=+p[0], op=p[1], B=+p[2];
-  let v=(op==="+"||op==="−"||op==="-" )?A*B/100:B/100;
+  let v=(op==="+"||op==="−")?A*B/100:B/100;
   expr=`${A} ${op} ${v}`; originalExpr+=" %";
   updateLive();return true;
 }
@@ -240,8 +254,8 @@ function applyPercent(){
 function doEnter(){
   if(expr==="") return false;
   let r;
-  try{r=+Function("return "+expr.replace(/×/g,"*").replace(/÷/g,"/"))();}
-  catch{return false;}
+  try{ r = safeEval(expr); }
+  catch{ return false; }
 
   let wrap=document.createElement("div");
   wrap.className="h-wrap";
@@ -267,22 +281,23 @@ function doEnter(){
   return true;
 }
 
-/* ---------- DELETE ROW ---------- */
+/* ---------- delete ---------- */
 function deleteRow(wrap){
   let v=parseFloat(wrap.dataset.value);
   grandTotal-=v;
   totalEl.innerText=formatIN(grandTotal.toFixed(2));
   wrap.remove();
-  vibrate(30);
+  if(navigator.vibrate) navigator.vibrate(30);
 }
 
-/* ---------- OTHERS ---------- */
+/* ---------- misc ---------- */
 function back(){
   if(expr==="") return false;
   expr=expr.slice(0,-1);
   originalExpr=originalExpr.slice(0,-1);
   updateLive();return true;
 }
+
 function clearAll(){
   if(expr===""&&historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
