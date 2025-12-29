@@ -18,6 +18,7 @@
 <title>Billing Calculator</title>
 
 <style>
+/* ===== BASE ===== */
 html,body{
   margin:0;
   height:100%;
@@ -36,7 +37,7 @@ html,body{
   flex-direction:column;
 }
 
-/* DISPLAY */
+/* ===== DISPLAY ===== */
 .display{
   flex:0 0 63%;
   min-height:0;
@@ -48,90 +49,123 @@ html,body{
   flex-direction:column;
 }
 
-/* HISTORY */
+/* ===== HISTORY ===== */
 .history{
   flex:1;
   min-height:0;
   overflow-y:auto;
+  overflow-x:hidden;
   display:flex;
   flex-direction:column;
-  gap:2px;
+  gap:2px;                     /* ⬅️ reduced gap */
   padding:0 6px;
   font-size:18px;
   font-variant-numeric: tabular-nums;
 }
 
+/* Capsule rows */
 .h-row{
   display:grid;
   grid-template-columns:1fr 160px;
   padding:5px 10px;
-  border-radius:999px;
+  border-radius:999px;         /* ⬅️ capsule */
+  background:rgba(0,0,0,0.05);
 }
-.h-row:nth-child(odd){background:rgba(90,120,100,.12)}
-.h-row:nth-child(even){background:rgba(120,90,100,.10)}
+
+/* zebra tint */
+.h-row:nth-child(odd){
+  background:rgba(90,120,100,0.12);
+}
+.h-row:nth-child(even){
+  background:rgba(120,90,100,0.10);
+}
 
 .h-exp{
   text-align:right;
   padding-right:10px;
   opacity:.85;
+  word-break:break-word;
 }
+
 .h-res{
   text-align:right;
   font-weight:600;
   padding-left:10px;
-  border-left:1px solid rgba(0,0,0,.18);
+  border-left:1px solid rgba(0,0,0,0.18);
 }
-.h-row.negative .h-res{color:#b00020}
 
+.h-row.negative .h-res{
+  color:#b00020;
+}
+
+/* ===== SEPARATORS ===== */
 .separator{
   height:2px;
   background:#999;
   margin:6px 0;
 }
 
+/* ===== LIVE INPUT ===== */
 .live{
   font-size:22px;
   min-height:28px;
   text-align:center;
+  padding:0 6px;
   color:#333;
 }
 
+/* ===== GRAND TOTAL ===== */
 .total{
   font-size:32px;
   font-weight:bold;
   text-align:right;
+  color:#000;
+  font-variant-numeric: tabular-nums;
 }
 
-/* KEYS */
+/* ===== KEYS ===== */
 .keys{
   flex:0 0 37%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:4px;
+  gap:4px;                     /* ⬅️ reduced gap */
+  align-content:start;
   margin-top:6px;
 }
 
+/* ===== BUTTONS ===== */
 button{
   height:56px;
   border:0;
-  border-radius:14px;
-  font-size:26px;
+  border-radius:14px;          /* ⬅️ rounder */
+  font-size:26px;              /* ⬅️ bigger text */
   font-weight:700;
   background:#444;
   color:#fff;
-  transition:transform .08s, box-shadow .08s;
+  transition:
+    transform .08s ease,
+    box-shadow .08s ease,
+    background .08s ease;
 }
+
+/* light glow on active */
 button:active{
   transform:scale(.96);
-  box-shadow:0 0 0 2px rgba(255,255,255,.15),
-             0 0 10px rgba(255,255,255,.25);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.15),
+    0 0 10px rgba(255,255,255,.25);
 }
 
 .num{background:#5a5a5a}
 .op{background:#5c5c5c}
 .ac{background:#c14a9a}
-.eq{grid-column:span 2; background:#6a6a6a}
+.eq{
+  grid-column:span 2;
+  background:#6a6a6a;
+  font-size:28px;
+}
 
+/* ===== LANDSCAPE BLOCK ===== */
 @media (orientation: landscape){
   body::before{
     content:"Rotate phone to vertical mode";
@@ -163,7 +197,7 @@ button:active{
   </div>
 
   <div class="keys">
-    <button class="ac" onclick="tap(clearAll,'strong')">AC</button>
+    <button class="ac" onclick="tap(clearAll)">AC</button>
     <button class="op" onclick="tap(back)">⌫</button>
     <button class="op" onclick="tap(applyPercent)">%</button>
     <button class="op" onclick="tap(()=>setOp('÷'))">÷</button>
@@ -185,32 +219,25 @@ button:active{
 
     <button class="num" onclick="tap(()=>digit('.'))">.</button>
     <button class="num" onclick="tap(()=>digit('0'))">0</button>
-    <button class="eq" onclick="tap(enter,'enter')">⏎ =</button>
+    <button class="eq" onclick="tap(enter)">⏎ =</button>
   </div>
 
 </div>
 
 <script>
-let historyEl=history;
-let liveEl=live;
-let totalEl=total;
+let historyEl=document.getElementById("history");
+let liveEl=document.getElementById("live");
+let totalEl=document.getElementById("total");
 
 let expr="", originalExpr="", grandTotal=0;
 
-/* SMART HAPTICS */
-function vibrate(type){
-  if(!navigator.vibrate) return;
-  if(type==="strong") navigator.vibrate(80);
-  else if(type==="enter") navigator.vibrate(40);
-  else navigator.vibrate(20);
+/* light vibration wrapper */
+function tap(fn){
+  if(navigator.vibrate) navigator.vibrate(20);
+  fn();
 }
 
-function tap(fn,type){
-  let acted=fn();
-  if(acted) vibrate(type);
-}
-
-/* FORMAT */
+/* Indian number formatter */
 function formatIN(n){
   if(n===""||n==="-" ) return n;
   let x=Number(n);
@@ -221,7 +248,8 @@ function formatIN(n){
 function clean(n){return Number(parseFloat(n).toFixed(10));}
 
 function updateLive(){
-  liveEl.innerText=expr.split(" ").map(p=>isNaN(p)?p:formatIN(p)).join(" ");
+  let parts=expr.split(" ");
+  liveEl.innerText=parts.map(p=>isNaN(p)?p:formatIN(p)).join(" ");
 }
 
 function currentNumber(){
@@ -229,64 +257,64 @@ function currentNumber(){
   return p[p.length-1];
 }
 
-/* ACTIONS (return true/false) */
 function digit(d){
   let c=currentNumber();
-  if(d==="."&&c.includes(".")) return false;
+  if(d==="."&&c.includes("."))return;
   let dig=c.replace("-","").replace(".","");
-  if(d!=="."&&dig.length>=12) return false;
-  expr+=d; originalExpr+=d; updateLive(); return true;
+  if(d!=="."&&dig.length>=12)return;
+  expr+=d; originalExpr+=d; updateLive();
 }
 
 function setOp(op){
-  if(expr===""&&op==="-"){expr="-";originalExpr="-";updateLive();return true;}
+  if(expr===""&&op==="-"){expr="-";originalExpr="-";updateLive();return;}
   if(expr.endsWith(" ")){
     expr=expr.slice(0,-3)+" "+op+" ";
     originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
-    updateLive(); return true;
+    updateLive();return;
   }
-  if(expr==="") return false;
-  expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive(); return true;
+  expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive();
 }
 
 function applyPercent(){
-  let p=expr.trim().split(" ");
-  if(p.length<3) return false;
+  let p=expr.trim().split(" "); if(p.length<3)return;
   let A=parseFloat(p[0]), op=p[1], B=parseFloat(p[2]);
   originalExpr+=" %";
   let v;
-  if(op==="+"||op==="-"||op==="−") v=A*B/100;
-  else if(op==="×") v=B/100;
-  else if(op==="÷") v=B/100;
-  else return false;
-  expr=`${A} ${op} ${v}`; updateLive(); return true;
+  if(op==="+"||op==="-"||op==="−"){v=A*B/100; expr=`${A} ${op} ${v}`;}
+  else if(op==="×"){v=B/100; expr=`${A} × ${v}`;}
+  else if(op==="÷"){v=B/100; expr=`${A} ÷ ${v}`;}
+  updateLive();
+}
+
+function evaluate(e){
+  e=e.replace(/×/g,"*").replace(/÷/g,"/");
+  return clean(Function("return "+e)());
 }
 
 function enter(){
-  if(expr===""||expr==="-"||expr==="−") return false;
-  let r; try{r=clean(Function("return "+expr.replace(/×/g,"*").replace(/÷/g,"/"))());}
-  catch{return false;}
+  if(expr===""||expr==="-"||expr==="−")return;
+  let r; try{r=evaluate(expr);}catch{return;}
+
   let row=document.createElement("div");
   row.className="h-row"+(r<0?" negative":"");
-  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${formatIN(r)}</span>`;
+  row.innerHTML=
+    `<span class="h-exp">${originalExpr} =</span>
+     <span class="h-res">${formatIN(r)}</span>`;
   historyEl.appendChild(row);
   historyEl.scrollTop=historyEl.scrollHeight;
+
   grandTotal=clean(grandTotal+r);
   totalEl.innerText=formatIN(grandTotal.toFixed(2));
-  expr=""; originalExpr=""; updateLive(); return true;
+
+  expr=""; originalExpr=""; updateLive();
 }
 
-function back(){
-  if(expr==="") return false;
-  expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1);
-  updateLive(); return true;
-}
-
+function back(){expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1); updateLive();}
 function clearAll(){
-  if(expr===""&&historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
-  historyEl.innerHTML=""; updateLive();
-  totalEl.innerText="0.00"; return true;
+  historyEl.innerHTML="";
+  updateLive();
+  totalEl.innerText="0.00";
 }
 </script>
 
