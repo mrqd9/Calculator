@@ -5,6 +5,7 @@
 
 <meta name="viewport"
       content="width=device-width,
+               height=device-height,
                initial-scale=1,
                maximum-scale=1,
                user-scalable=no">
@@ -17,7 +18,7 @@
 <title>Billing Calculator</title>
 
 <style>
-/* ===== LOCK SCREEN & BASE ===== */
+/* ===== BASE LOCK ===== */
 html,body{
   margin:0;
   height:100%;
@@ -30,28 +31,30 @@ html,body{
 .calc{
   height:100vh;
   background:#2a2a2a;
-  padding:14px;
+  padding:12px;
   box-sizing:border-box;
   display:flex;
   flex-direction:column;
 }
 
-/* ===== DISPLAY (FIXED HEIGHT, NO EXPAND) ===== */
+/* ===== DISPLAY (RESPONSIVE FIXED RATIO) ===== */
 .display{
+  flex:0 0 55%;
+  min-height:320px;
+  max-height:420px;
   background:#cfd6c8;
-  height:58%;                 /* 🔒 fixed share */
   border-radius:6px;
-  padding:14px;
-  margin-bottom:12px;
+  padding:12px;
+  box-sizing:border-box;
   display:flex;
   flex-direction:column;
-  box-sizing:border-box;
+  margin-bottom:10px;
 }
 
-/* ===== HISTORY (SCROLLABLE LEDGER) ===== */
+/* ===== HISTORY (SCROLL ONLY) ===== */
 .history{
   flex:1;
-  overflow-y:auto;            /* ✅ scroll here */
+  overflow-y:auto;
   overflow-x:hidden;
   display:flex;
   flex-direction:column;
@@ -61,13 +64,13 @@ html,body{
   font-variant-numeric: tabular-nums;
 }
 
-/* Zebra striping (greenish-grey theme) */
+/* Zebra striping – greenish grey */
 .h-row{
   display:grid;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns:1fr 120px;
   align-items:baseline;
+  padding:3px 5px;
   border-radius:4px;
-  padding:2px 4px;
 }
 .h-row:nth-child(odd){
   background:rgba(90,120,100,0.1);
@@ -79,7 +82,7 @@ html,body{
 .h-exp{
   text-align:right;
   padding-right:8px;
-  opacity:0.85;
+  opacity:.85;
   word-break:break-word;
 }
 .h-res{
@@ -94,53 +97,42 @@ html,body{
 .separator{
   height:2px;
   background:#999;
-  margin:8px 0;
+  margin:6px 0;
 }
 
-/* ===== TYPING ===== */
+/* ===== LIVE INPUT ===== */
 .live{
   font-size:24px;
   text-align:right;
-  min-height:32px;
+  min-height:30px;
   padding:0 6px;
   color:#333;
 }
 
 /* ===== GRAND TOTAL ===== */
-.total-wrap{
-  display:flex;
-  justify-content:center;
-}
 .total{
-  width:100%;
-  font-size:34px;
+  font-size:32px;
   font-weight:bold;
   text-align:center;
   color:#000;
   font-variant-numeric: tabular-nums;
 }
 
-/* Total animation */
-@keyframes totalFlash{
-  0%{transform:scale(1.03)}
-  100%{transform:scale(1)}
-}
-.total.flash{
-  animation:totalFlash .25s ease-out;
-}
-
-/* ===== BUTTONS (ALWAYS VISIBLE) ===== */
-.grid{
-  flex-shrink:0;              /* 🔒 never shrink */
+/* ===== BUTTON AREA (RESPONSIVE FIXED RATIO) ===== */
+.keys{
+  flex:0 0 45%;
+  min-height:300px;
+  max-height:420px;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:8px;
 }
+
 button{
   height:56px;
   border:0;
   border-radius:6px;
-  font-size:22px;
+  font-size:24px;
   background:#444;
   color:#fff;
 }
@@ -153,12 +145,31 @@ button{
   font-size:26px;
 }
 button:active{transform:scale(.96)}
+
+/* ===== LANDSCAPE LOCK SCREEN ===== */
+@media (orientation: landscape){
+  body::before{
+    content:"Rotate phone to vertical mode";
+    position:fixed;
+    inset:0;
+    background:#000;
+    color:#fff;
+    font-size:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+  }
+  .calc{display:none;}
+}
 </style>
 </head>
 
 <body>
 
 <div class="calc">
+
+  <!-- DISPLAY -->
   <div class="display">
     <div id="history" class="history"></div>
 
@@ -168,12 +179,11 @@ button:active{transform:scale(.96)}
 
     <div class="separator"></div>
 
-    <div class="total-wrap">
-      <div id="total" class="total">0.00</div>
-    </div>
+    <div id="total" class="total">0.00</div>
   </div>
 
-  <div class="grid">
+  <!-- KEYS -->
+  <div class="keys">
     <button class="ac" onclick="clearAll()">AC</button>
     <button class="op" onclick="back()">⌫</button>
     <button class="op" onclick="applyPercent()">%</button>
@@ -198,6 +208,7 @@ button:active{transform:scale(.96)}
     <button class="num" onclick="digit('0')">0</button>
     <button class="eq" onclick="enter()">ENTER</button>
   </div>
+
 </div>
 
 <script>
@@ -247,24 +258,16 @@ function evaluate(e){
 
 function enter(){
   if(expr===""||expr==="-"||expr==="−")return;
-  let r; try{r=evaluate(expr);}catch{updateLive("Error");return;}
+  let r; try{r=evaluate(expr);}catch{return;}
 
   let row=document.createElement("div");
   row.className="h-row"+(r<0?" negative":"");
-  row.innerHTML=`
-    <span class="h-exp">${originalExpr} =</span>
-    <span class="h-res">${r}</span>
-  `;
+  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${r}</span>`;
   historyEl.appendChild(row);
-
-  /* auto-scroll to bottom */
-  historyEl.scrollTop = historyEl.scrollHeight;
+  historyEl.scrollTop=historyEl.scrollHeight;
 
   grandTotal=clean(grandTotal+r);
   totalEl.innerText=grandTotal.toFixed(2);
-  totalEl.classList.remove("flash");
-  void totalEl.offsetWidth;
-  totalEl.classList.add("flash");
 
   expr=""; originalExpr=""; updateLive("");
 }
