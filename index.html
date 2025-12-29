@@ -17,6 +17,7 @@
 <title>Billing Calculator</title>
 
 <style>
+/* ===== LOCK SCREEN & BASE ===== */
 html,body{
   margin:0;
   height:100%;
@@ -35,21 +36,23 @@ html,body{
   flex-direction:column;
 }
 
-/* DISPLAY */
+/* ===== DISPLAY (FIXED HEIGHT, NO EXPAND) ===== */
 .display{
   background:#cfd6c8;
-  flex:1;
+  height:58%;                 /* 🔒 fixed share */
   border-radius:6px;
   padding:14px;
   margin-bottom:12px;
   display:flex;
   flex-direction:column;
+  box-sizing:border-box;
 }
 
-/* HISTORY (LEDGER STYLE) */
+/* ===== HISTORY (SCROLLABLE LEDGER) ===== */
 .history{
   flex:1;
-  overflow:hidden;
+  overflow-y:auto;            /* ✅ scroll here */
+  overflow-x:hidden;
   display:flex;
   flex-direction:column;
   gap:4px;
@@ -58,7 +61,7 @@ html,body{
   font-variant-numeric: tabular-nums;
 }
 
-/* Zebra rows */
+/* Zebra striping (greenish-grey theme) */
 .h-row{
   display:grid;
   grid-template-columns: 1fr 120px;
@@ -66,12 +69,11 @@ html,body{
   border-radius:4px;
   padding:2px 4px;
 }
-
 .h-row:nth-child(odd){
-  background:rgba(90,120,100,0.09);
+  background:rgba(90,120,100,0.1);
 }
 .h-row:nth-child(even){
-  background:rgba(120,90,100,0.09);
+  background:rgba(120,90,100,0.1);
 }
 
 .h-exp{
@@ -80,24 +82,22 @@ html,body{
   opacity:0.85;
   word-break:break-word;
 }
-
 .h-res{
   text-align:right;
   font-weight:600;
 }
-
 .h-row.negative .h-res{
   color:#b00020;
 }
 
-/* SEPARATORS */
+/* ===== SEPARATORS ===== */
 .separator{
   height:2px;
   background:#999;
   margin:8px 0;
 }
 
-/* TYPING */
+/* ===== TYPING ===== */
 .live{
   font-size:24px;
   text-align:right;
@@ -106,7 +106,7 @@ html,body{
   color:#333;
 }
 
-/* GRAND TOTAL */
+/* ===== GRAND TOTAL ===== */
 .total-wrap{
   display:flex;
   justify-content:center;
@@ -120,7 +120,7 @@ html,body{
   font-variant-numeric: tabular-nums;
 }
 
-/* TOTAL ANIMATION */
+/* Total animation */
 @keyframes totalFlash{
   0%{transform:scale(1.03)}
   100%{transform:scale(1)}
@@ -129,8 +129,9 @@ html,body{
   animation:totalFlash .25s ease-out;
 }
 
-/* BUTTONS */
+/* ===== BUTTONS (ALWAYS VISIBLE) ===== */
 .grid{
+  flex-shrink:0;              /* 🔒 never shrink */
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:8px;
@@ -255,6 +256,9 @@ function enter(){
     <span class="h-res">${r}</span>
   `;
   historyEl.appendChild(row);
+
+  /* auto-scroll to bottom */
+  historyEl.scrollTop = historyEl.scrollHeight;
 
   grandTotal=clean(grandTotal+r);
   totalEl.innerText=grandTotal.toFixed(2);
