@@ -36,27 +36,26 @@ html,body{
   flex-direction:column;
 }
 
-/* DISPLAY */
+/* ===== DISPLAY ===== */
 .display{
   flex:0 0 63%;
   min-height:0;
   background:#cfd6c8;
   border-radius:8px;
   padding:12px;
-  box-sizing:border-box;
   display:flex;
   flex-direction:column;
 }
 
-/* HISTORY */
+/* ===== HISTORY ===== */
 .history{
   flex:1;
   min-height:0;
   overflow-y:auto;
   display:flex;
   flex-direction:column;
-  gap:2px;
-  padding:0 6px;
+  gap:3px;
+  padding:0 4px;
   font-size:18px;
   font-variant-numeric: tabular-nums;
 }
@@ -64,74 +63,82 @@ html,body{
 .h-row{
   display:grid;
   grid-template-columns:1fr 160px;
-  padding:5px 10px;
+  padding:6px 12px;
   border-radius:999px;
 }
-.h-row:nth-child(odd){background:rgba(90,120,100,.12)}
-.h-row:nth-child(even){background:rgba(120,90,100,.10)}
+.h-row:nth-child(odd){background:rgba(90,120,100,0.10)}
+.h-row:nth-child(even){background:rgba(120,90,100,0.10)}
 
 .h-exp{
   text-align:right;
-  padding-right:10px;
+  padding-right:12px;
   opacity:.85;
+  word-break:break-word;
 }
 .h-res{
   text-align:right;
   font-weight:600;
-  padding-left:10px;
-  border-left:1px solid rgba(0,0,0,.18);
+  padding-left:12px;
+  border-left:1px solid rgba(0,0,0,0.18);
 }
 .h-row.negative .h-res{color:#b00020}
 
+/* ===== SEPARATORS ===== */
 .separator{
   height:2px;
   background:#999;
   margin:6px 0;
 }
 
+/* ===== LIVE / TOTAL ===== */
 .live{
   font-size:22px;
   min-height:28px;
   text-align:center;
   color:#333;
 }
-
 .total{
   font-size:32px;
   font-weight:bold;
   text-align:right;
+  font-variant-numeric: tabular-nums;
 }
 
-/* KEYS */
+/* ===== KEYS ===== */
 .keys{
   flex:0 0 37%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:4px;
-  margin-top:6px;
+  gap:5px;
+  align-content:start;
+  margin-top:8px;
 }
 
+/* ===== BUTTONS ===== */
 button{
   height:56px;
   border:0;
-  border-radius:14px;
+  border-radius:12px;
   font-size:26px;
-  font-weight:700;
+  font-weight:600;
   background:#444;
   color:#fff;
-  transition:transform .08s, box-shadow .08s;
+  transition:background .12s ease,transform .05s ease;
 }
 button:active{
-  transform:scale(.96);
-  box-shadow:0 0 0 2px rgba(255,255,255,.15),
-             0 0 10px rgba(255,255,255,.25);
+  background:#777;
+  transform:scale(.97);
 }
-
 .num{background:#5a5a5a}
 .op{background:#5c5c5c}
 .ac{background:#c14a9a}
-.eq{grid-column:span 2; background:#6a6a6a}
+.eq{
+  grid-column:span 2;
+  background:#6a6a6a;
+  font-size:28px;
+}
 
+/* ===== LANDSCAPE BLOCK ===== */
 @media (orientation: landscape){
   body::before{
     content:"Rotate phone to vertical mode";
@@ -153,7 +160,6 @@ button:active{
 <body>
 
 <div class="calc">
-
   <div class="display">
     <div id="history" class="history"></div>
     <div class="separator"></div>
@@ -163,7 +169,7 @@ button:active{
   </div>
 
   <div class="keys">
-    <button class="ac" onclick="tap(clearAll,'strong')">AC</button>
+    <button class="ac" onclick="tap(clearAll)">AC</button>
     <button class="op" onclick="tap(back)">⌫</button>
     <button class="op" onclick="tap(applyPercent)">%</button>
     <button class="op" onclick="tap(()=>setOp('÷'))">÷</button>
@@ -185,94 +191,83 @@ button:active{
 
     <button class="num" onclick="tap(()=>digit('.'))">.</button>
     <button class="num" onclick="tap(()=>digit('0'))">0</button>
-    <button class="eq" onclick="tap(enter,'enter')">⏎ =</button>
+    <button class="eq" onclick="tap(enter)">⏎ =</button>
   </div>
-
 </div>
 
 <script>
-let historyEl=history;
-let liveEl=live;
-let totalEl=total;
+let historyEl=document.getElementById("history");
+let liveEl=document.getElementById("live");
+let totalEl=document.getElementById("total");
 
 let expr="", originalExpr="", grandTotal=0;
 
-/* SMART HAPTICS */
-function vibrate(type){
-  if(!navigator.vibrate) return;
-  if(type==="strong") navigator.vibrate(80);
-  else if(type==="enter") navigator.vibrate(40);
-  else navigator.vibrate(20);
+/* ===== HAPTIC WRAPPER (ONLY ON VALID ACTION) ===== */
+function tap(fn){
+  let changed=fn();
+  if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
-function tap(fn,type){
-  let acted=fn();
-  if(acted) vibrate(type);
-}
-
-/* FORMAT */
+/* ===== FORMATTER ===== */
 function formatIN(n){
   if(n===""||n==="-" ) return n;
   let x=Number(n);
   if(isNaN(x)) return n;
   return x.toLocaleString("en-IN",{maximumFractionDigits:10});
 }
-
 function clean(n){return Number(parseFloat(n).toFixed(10));}
 
 function updateLive(){
   liveEl.innerText=expr.split(" ").map(p=>isNaN(p)?p:formatIN(p)).join(" ");
 }
+function currentNumber(){return expr.split(" ").pop();}
 
-function currentNumber(){
-  let p=expr.split(" ");
-  return p[p.length-1];
-}
-
-/* ACTIONS (return true/false) */
+/* ===== ACTIONS ===== */
 function digit(d){
   let c=currentNumber();
   if(d==="."&&c.includes(".")) return false;
-  let dig=c.replace("-","").replace(".","");
-  if(d!=="."&&dig.length>=12) return false;
+  if(d!=="."&&c.replace("-","").replace(".","").length>=12) return false;
   expr+=d; originalExpr+=d; updateLive(); return true;
 }
 
 function setOp(op){
   if(expr===""&&op==="-"){expr="-";originalExpr="-";updateLive();return true;}
+  if(expr===""||expr.endsWith(" ")) return false;
   if(expr.endsWith(" ")){
     expr=expr.slice(0,-3)+" "+op+" ";
     originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
-    updateLive(); return true;
+  }else{
+    expr+=" "+op+" "; originalExpr+=" "+op+" ";
   }
-  if(expr==="") return false;
-  expr+=" "+op+" "; originalExpr+=" "+op+" "; updateLive(); return true;
+  updateLive(); return true;
 }
 
 function applyPercent(){
-  let p=expr.trim().split(" ");
-  if(p.length<3) return false;
+  let p=expr.trim().split(" "); if(p.length<3) return false;
   let A=parseFloat(p[0]), op=p[1], B=parseFloat(p[2]);
   originalExpr+=" %";
-  let v;
-  if(op==="+"||op==="-"||op==="−") v=A*B/100;
-  else if(op==="×") v=B/100;
-  else if(op==="÷") v=B/100;
-  else return false;
+  let v=(op==="+"||op==="-"||op==="−")?A*B/100:B/100;
   expr=`${A} ${op} ${v}`; updateLive(); return true;
+}
+
+function evaluate(e){
+  return clean(Function("return "+e.replace(/×/g,"*").replace(/÷/g,"/"))());
 }
 
 function enter(){
   if(expr===""||expr==="-"||expr==="−") return false;
-  let r; try{r=clean(Function("return "+expr.replace(/×/g,"*").replace(/÷/g,"/"))());}
-  catch{return false;}
+  let r; try{r=evaluate(expr);}catch{return false;}
+
   let row=document.createElement("div");
   row.className="h-row"+(r<0?" negative":"");
-  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${formatIN(r)}</span>`;
+  row.innerHTML=`<span class="h-exp">${originalExpr} =</span>
+                 <span class="h-res">${formatIN(r)}</span>`;
   historyEl.appendChild(row);
   historyEl.scrollTop=historyEl.scrollHeight;
+
   grandTotal=clean(grandTotal+r);
   totalEl.innerText=formatIN(grandTotal.toFixed(2));
+
   expr=""; originalExpr=""; updateLive(); return true;
 }
 
