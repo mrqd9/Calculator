@@ -37,9 +37,10 @@ html,body{
   flex-direction:column;
 }
 
-/* ===== DISPLAY : 60% ===== */
+/* ===== DISPLAY : 60% (FIXED, NO EXPAND) ===== */
 .display{
-  flex:0 0 60%;
+  flex:0 0 63%;
+  min-height:0;                 /* 🔑 CRITICAL FIX */
   background:#cfd6c8;
   border-radius:6px;
   padding:12px;
@@ -48,9 +49,10 @@ html,body{
   flex-direction:column;
 }
 
-/* HISTORY (SCROLL ONLY HERE) */
+/* ===== HISTORY (SCROLLS HERE ONLY) ===== */
 .history{
   flex:1;
+  min-height:0;                 /* 🔑 SAFETY */
   overflow-y:auto;
   overflow-x:hidden;
   display:flex;
@@ -69,7 +71,7 @@ html,body{
   border-radius:4px;
 }
 .h-row:nth-child(odd){
-  background:rgba(90,120,100,0.15);
+  background:rgba(90,120,100,0.10);
 }
 .h-row:nth-child(even){
   background:rgba(120,90,100,0.10);
@@ -89,14 +91,14 @@ html,body{
   color:#b00020;
 }
 
-/* SEPARATORS */
+/* ===== SEPARATORS ===== */
 .separator{
   height:2px;
   background:#999;
   margin:6px 0;
 }
 
-/* LIVE INPUT */
+/* ===== LIVE INPUT ===== */
 .live{
   font-size:24px;
   min-height:30px;
@@ -105,7 +107,7 @@ html,body{
   color:#333;
 }
 
-/* GRAND TOTAL */
+/* ===== GRAND TOTAL ===== */
 .total{
   font-size:32px;
   font-weight:bold;
@@ -116,7 +118,7 @@ html,body{
 
 /* ===== KEYS : 40% ===== */
 .keys{
-  flex:0 0 40%;
+  flex:0 0 37%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:6px;
