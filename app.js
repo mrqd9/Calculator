@@ -105,7 +105,7 @@ function applyPercent(){
   updateLive(); return true;
 }
 
-/* EVAL */
+/* EVALUATE */
 function evaluate(e){
   let ex=e.replace(/×/g,"*").replace(/÷/g,"/");
   if(/^\d+\s*\*\s*\d+$/.test(ex)){
@@ -133,11 +133,14 @@ function enter(){
 
   let res=row.querySelector(".h-res");
   res.innerText=formatAdaptive(r,res);
+  if(Number(r)<0) res.classList.add("negative");
 
   enableSwipe(row);
 
   grandTotal=clean(grandTotal+Number(r));
   totalEl.innerText=formatAdaptive(grandTotal.toFixed(2),totalEl);
+  if(grandTotal<0) totalEl.classList.add("negative");
+  else totalEl.classList.remove("negative");
 
   expr=""; originalExpr=""; updateLive(); return true;
 }
@@ -148,6 +151,8 @@ function deleteRow(row){
   if(!isNaN(v)){
     grandTotal=clean(grandTotal-v);
     totalEl.innerText=formatAdaptive(grandTotal.toFixed(2),totalEl);
+    if(grandTotal<0) totalEl.classList.add("negative");
+    else totalEl.classList.remove("negative");
   }
   row.remove();
 }
@@ -199,5 +204,7 @@ function clearAll(){
   if(expr===""&&historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
   historyEl.innerHTML="";
-  updateLive(); totalEl.innerText="0.00"; return true;
+  updateLive(); totalEl.innerText="0.00";
+  totalEl.classList.remove("negative");
+  return true;
 }
