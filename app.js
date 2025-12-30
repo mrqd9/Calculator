@@ -10,6 +10,13 @@ function tap(fn){
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
+/* AUTO SCROLL (KEY FIX) */
+function scrollHistoryToBottom(){
+  requestAnimationFrame(()=>{
+    historyEl.scrollTop = historyEl.scrollHeight;
+  });
+}
+
 /* HELPERS */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
@@ -52,7 +59,7 @@ function fits(el,text){
   return ok;
 }
 
-/* ADAPTIVE FORMAT */
+/* ADAPTIVE */
 function formatAdaptive(val,el){
   let s=val.toString();
   let n=formatIN(s);
@@ -77,7 +84,7 @@ function digit(d){
   expr+=d; originalExpr+=d; updateLive(); return true;
 }
 
-/* OPERATOR (REPLACE LOGIC) */
+/* OPERATOR */
 function setOp(op){
   if(expr===""){
     if(op==="-"){expr="-"; originalExpr="-"; updateLive(); return true;}
@@ -105,7 +112,7 @@ function applyPercent(){
   updateLive(); return true;
 }
 
-/* EVALUATE */
+/* EVAL */
 function evaluate(e){
   let ex=e.replace(/×/g,"*").replace(/÷/g,"/");
   if(/^\d+\s*\*\s*\d+$/.test(ex)){
@@ -142,6 +149,8 @@ function enter(){
   if(grandTotal<0) totalEl.classList.add("negative");
   else totalEl.classList.remove("negative");
 
+  scrollHistoryToBottom();   /* ⭐ auto-scroll */
+
   expr=""; originalExpr=""; updateLive(); return true;
 }
 
@@ -155,9 +164,10 @@ function deleteRow(row){
     else totalEl.classList.remove("negative");
   }
   row.remove();
+  scrollHistoryToBottom();
 }
 
-/* SWIPE TO DELETE */
+/* SWIPE */
 function enableSwipe(row){
   let sx=0, dx=0, drag=false;
 
@@ -206,5 +216,6 @@ function clearAll(){
   historyEl.innerHTML="";
   updateLive(); totalEl.innerText="0.00";
   totalEl.classList.remove("negative");
+  scrollHistoryToBottom();
   return true;
 }
