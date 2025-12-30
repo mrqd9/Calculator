@@ -1,27 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width,
-               height=device-height,
-               initial-scale=1,
-               maximum-scale=1,
-               user-scalable=no">
-
+<meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#2a2a2a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
-
 <title>Billing Calculator</title>
 </head>
-
 <body>
-
 <div class="calc">
   <div class="display">
     <div id="history" class="history"></div>
@@ -30,7 +19,6 @@
     <div class="separator"></div>
     <div id="total" class="total">0.00</div>
   </div>
-
   <div class="keys">
     <button class="ac" onclick="tap(clearAll)">AC</button>
     <button class="op" onclick="tap(back)">⌫</button>
@@ -63,6 +51,6 @@
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js");
 }
-      </script>
+</script>
 </body>
 </html>
