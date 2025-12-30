@@ -46,7 +46,7 @@ html,body{
 .h-row{
   display:grid;
   grid-template-columns:1fr 160px;
-  padding:8px 14px;
+  padding:4px 12px;
   border-radius:999px;
 }
 .h-row:nth-child(odd){background:rgba(90,120,100,.12)}
