@@ -27,7 +27,7 @@ function formatIN(str){
   intPart = intPart.replace(/\D/g,"");
 
   // 🔴 very large number → scientific
-  if(intPart.length > 10){
+  if(intPart.length > 12){
     return formatScientific(intPart);
   }
 
