@@ -10,15 +10,12 @@ function tap(fn){
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
-/* ===== NUMBER FORMATTERS ===== */
-function formatScientific(str){
-  str = str.replace(/\D/g,"");
-  let len = str.length;
-  if(len === 0) return "0";
-  let mantissa = str.slice(0,3);
-  return `${mantissa[0]}.${mantissa.slice(1)}E${len-1}`;
+/* ===== FORMAT HELPERS ===== */
+function clean(n){
+  return Number(parseFloat(n).toFixed(10));
 }
 
+/* Indian format (STRING SAFE) */
 function formatIN(str){
   if(str === "" || str === "-") return str;
   str = str.toString();
@@ -26,14 +23,9 @@ function formatIN(str){
   let [intPart, decPart] = str.split(".");
   intPart = intPart.replace(/\D/g,"");
 
-  // 🔴 very large number → scientific
-  if(intPart.length > 12){
-    return formatScientific(intPart);
-  }
-
-  // Indian grouping
   let last3 = intPart.slice(-3);
   let rest = intPart.slice(0,-3);
+
   if(rest){
     rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
     intPart = rest + "," + last3;
@@ -44,11 +36,37 @@ function formatIN(str){
   return decPart ? intPart + "." + decPart : intPart;
 }
 
-function clean(n){
-  return Number(parseFloat(n).toFixed(10));
+/* Scientific notation (STRING SAFE) */
+function formatScientific(str){
+  str = str.replace(/\D/g,"");
+  if(!str) return "0";
+  let len = str.length;
+  let mantissa = str.slice(0,3);
+  return `${mantissa[0]}.${mantissa.slice(1)}E${len-1}`;
 }
 
-/* ===== LIVE DISPLAY ===== */
+/* Does text fit inside element width? */
+function fitsInElement(el, text){
+  const test = document.createElement("span");
+  test.style.visibility = "hidden";
+  test.style.whiteSpace = "nowrap";
+  test.style.font = getComputedStyle(el).font;
+  test.innerText = text;
+  document.body.appendChild(test);
+  let fits = test.offsetWidth <= el.clientWidth;
+  document.body.removeChild(test);
+  return fits;
+}
+
+/* Adaptive formatter (NORMAL → E when space over) */
+function formatAdaptive(value, el){
+  let str = value.toString();
+  let normal = formatIN(str);
+  if(fitsInElement(el, normal)) return normal;
+  return formatScientific(str);
+}
+
+/* ===== LIVE DISPLAY (NO E HERE) ===== */
 function updateLive(){
   liveEl.innerText = expr
     .split(" ")
@@ -92,7 +110,6 @@ function applyPercent(){
   let A = parseFloat(p[0]);
   let op = p[1];
   let B = parseFloat(p[2]);
-
   if(isNaN(A) || isNaN(B)) return false;
 
   originalExpr += " %";
@@ -118,16 +135,20 @@ function enter(){
   catch{ return false; }
 
   let row = document.createElement("div");
-  row.className = "h-row" + (r<0 ? " negative" : "");
-  row.innerHTML =
-    `<span class="h-exp">${originalExpr} =</span>
-     <span class="h-res">${formatIN(r.toString())}</span>`;
-
+  row.className = "h-row" + (r < 0 ? " negative" : "");
+  row.innerHTML = `
+    <span class="h-exp">${originalExpr} =</span>
+    <span class="h-res"></span>
+  `;
   historyEl.appendChild(row);
+
+  let resEl = row.querySelector(".h-res");
+  resEl.innerText = formatAdaptive(r, resEl);
+
   historyEl.scrollTop = historyEl.scrollHeight;
 
   grandTotal = clean(grandTotal + r);
-  totalEl.innerText = formatIN(grandTotal.toFixed(2));
+  totalEl.innerText = formatAdaptive(grandTotal.toFixed(2), totalEl);
 
   expr = ""; originalExpr = "";
   updateLive();
@@ -153,12 +174,12 @@ function clearAll(){
   return true;
 }
 
-/* ===== LONG PRESS CUT ===== */
+/* ===== LONG PRESS CUT (NO FALSE VIBRATION) ===== */
 let cutTimer = null;
 let cutLongPress = false;
 
 function cutPressStart(){
-  if(expr==="") return;   // 🔑 no false trigger
+  if(expr==="") return;
   cutLongPress = false;
 
   cutTimer = setTimeout(()=>{
