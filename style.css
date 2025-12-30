@@ -9,7 +9,11 @@ html,body{
 
 .calc{
   height:100vh;
-  padding:12px;
+  padding:
+    12px
+    12px
+    calc(12px + env(safe-area-inset-bottom))
+    12px;
   box-sizing:border-box;
   background:#2a2a2a;
   display:flex;
