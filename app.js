@@ -35,11 +35,19 @@ function formatIN(str){
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
   let out = (rest ? rest + "," : "") + last3;
-
-  if(d !== undefined){
-    return out + "." + d;
-  }
+  if(d !== undefined) return out + "." + d;
   return out;
+}
+
+/* ================= HISTORY FORMAT ================= */
+function formatHistory(toks){
+  return toks.map(t=>{
+    // "-5" → "- 5" (display only)
+    if(/^-\d/.test(t)){
+      return "- " + t.slice(1);
+    }
+    return t;
+  }).join(" ");
 }
 
 /* ================= LIVE ================= */
@@ -131,7 +139,7 @@ function enter(){
   row.dataset.value = result;
 
   row.innerHTML = `
-    <span class="h-exp">${tokens.join(" ")} =</span>
+    <span class="h-exp">${formatHistory(tokens)} =</span>
     <span class="h-res">${formatIN(result.toString())}</span>
   `;
 
@@ -216,7 +224,7 @@ function cutPressCancel(){
   clearTimeout(cutTimer);
 }
 
-/* ================= SWIPE TO DELETE (ENHANCED) ================= */
+/* ================= SWIPE TO DELETE ================= */
 function enableSwipe(row){
   let startX = 0;
   let dx = 0;
