@@ -125,7 +125,12 @@ button:active{
   background:#6a6a6a;
   font-size:28px;
 }
-
+.keys,
+button{
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
 /* ===== LANDSCAPE BLOCK ===== */
 @media (orientation:landscape){
   body::before{
