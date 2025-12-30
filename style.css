@@ -126,19 +126,19 @@ html,body{
   min-height:28px;
   text-align:center;
   font-size:22px;
-  font-weight:400;
+  font-weight:500;
 }
 .total{
-  height:42px;
-  min-height:42px;
+  height:40px;
+  min-height:40px;
   text-align:right;
-  font-size:34px;
-  font-weight:700;
+  font-size:32px;
+  font-weight:600;
 }
 
 /* KEYS */
 .keys{
-  flex:0 0 38%;
+  flex:0 0 auto;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:6px;
