@@ -22,7 +22,7 @@ function scrollHistoryToBottom(){
   });
 }
 
-/* ================= FORMAT ================= */
+/* ================= NUMBER FORMAT ================= */
 function formatIN(str){
   if(str==="" || str==="-") return str;
 
@@ -39,22 +39,23 @@ function formatIN(str){
   return out;
 }
 
-/* ================= HISTORY FORMAT ================= */
-function formatHistory(toks){
-  return toks.map(t=>{
-    // "-5" → "- 5" (display only)
-    if(/^-\d/.test(t)){
-      return "- " + t.slice(1);
-    }
-    return t;
-  }).join(" ");
+/* ================= TOKEN DISPLAY FORMAT ================= */
+function formatTokenForDisplay(t){
+  // Unary minus number: "-5" → "- 5"
+  if(/^-\d/.test(t)){
+    return "- " + formatIN(t.slice(1));
+  }
+  // Normal number
+  if(/^\d/.test(t)){
+    return formatIN(t);
+  }
+  // Operator
+  return t;
 }
 
 /* ================= LIVE ================= */
 function updateLive(){
-  let text = tokens
-    .map(t => (/^\d|\-/.test(t) ? formatIN(t) : t))
-    .join(" ");
+  let text = tokens.map(formatTokenForDisplay).join(" ");
 
   liveEl.innerHTML = text
     ? `${text}<span class="caret"></span>`
@@ -65,26 +66,31 @@ function updateLive(){
 function digit(d){
   let last = tokens[tokens.length - 1];
 
+  // First input
   if(tokens.length === 0){
     tokens.push(d === "." ? "0." : d);
     updateLive();
     return true;
   }
 
+  // Starting negative number
   if(last === "-" && tokens.length === 1){
     tokens[0] = (d === ".") ? "-0." : "-" + d;
     updateLive();
     return true;
   }
 
+  // After operator
   if(["+","-","×","÷"].includes(last)){
     tokens.push(d === "." ? "0." : d);
     updateLive();
     return true;
   }
 
+  // Prevent double dot
   if(d === "." && last.includes(".")) return false;
 
+  // Length limit (ignore - and .)
   let pure = last.replace("-","").replace(".","");
   if(d !== "." && pure.length >= 12) return false;
 
@@ -139,7 +145,7 @@ function enter(){
   row.dataset.value = result;
 
   row.innerHTML = `
-    <span class="h-exp">${formatHistory(tokens)} =</span>
+    <span class="h-exp">${tokens.map(formatTokenForDisplay).join(" ")} =</span>
     <span class="h-res">${formatIN(result.toString())}</span>
   `;
 
