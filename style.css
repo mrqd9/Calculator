@@ -16,13 +16,7 @@ html,body{
   flex-direction:column;
 }
 
-@supports (height: 100dvh){
-  .calc{
-    height:100dvh;
-  }
-}
-
-/* DISPLAY */
+/* ===== DISPLAY ===== */
 .display{
   flex:0 0 61%;
   min-height:0;
@@ -33,7 +27,7 @@ html,body{
   flex-direction:column;
 }
 
-/* HISTORY */
+/* ===== HISTORY ===== */
 .history{
   flex:1;
   min-height:0;
@@ -69,14 +63,14 @@ html,body{
 }
 .h-row.negative .h-res{color:#b00020}
 
-/* SEPARATORS */
+/* ===== SEPARATORS ===== */
 .separator{
   height:2px;
   background:#999;
   margin:6px 0;
 }
 
-/* LIVE / TOTAL */
+/* ===== LIVE / TOTAL ===== */
 .live{
   font-size:22px;
   min-height:28px;
@@ -89,16 +83,25 @@ html,body{
   text-align:right;
 }
 
-/* KEYS */
+/* ===== KEYS ===== */
 .keys{
   flex:0 0 39%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:5px;
   margin-top:8px;
+  padding-bottom:20px; /* comfort padding */
 }
 
-/* BUTTONS */
+/* 🔒 HARD ANDROID NAV BAR PROTECTION */
+.keys::after{
+  content:"";
+  display:block;
+  height:24px;          /* GUARANTEED SAFE SPACE */
+  grid-column:1 / -1;
+}
+
+/* ===== BUTTONS ===== */
 button{
   height:56px;
   border:0;
@@ -122,7 +125,7 @@ button:active{
   font-size:28px;
 }
 
-/* LANDSCAPE BLOCK */
+/* ===== LANDSCAPE BLOCK ===== */
 @media (orientation: landscape){
   body::before{
     content:"Rotate phone to vertical mode";
