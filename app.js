@@ -88,7 +88,7 @@ function cutPressStart(){
       if (navigator.vibrate) navigator.vibrate(25);
     }
     cutLongPress = true;
-  }, 600); // 👈 long press threshold
+  }, 450);
 }
 
 function cutPressEnd(){
