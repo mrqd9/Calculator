@@ -96,7 +96,6 @@ html,body{
   grid-template-columns:repeat(4,1fr);
   gap:5px;
   margin-top:8px;
-  padding-bottom:16px;
 }
 
 /* BUTTONS */
