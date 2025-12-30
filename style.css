@@ -1,10 +1,16 @@
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
 html,body{
-  margin:0;height:100%;overflow:hidden;
+  margin:0;
+  height:100%;
+  overflow:hidden;
   background:#181818;
   font-family:system-ui;
 }
 
+/* APP */
 .calc{
   height:100dvh;
   padding:12px;
@@ -14,6 +20,7 @@ html,body{
   gap:10px;
 }
 
+/* DISPLAY */
 .display{
   flex:1;
   min-height:0;
@@ -25,6 +32,7 @@ html,body{
   box-shadow:0 10px 26px rgba(0,0,0,.28);
 }
 
+/* HISTORY */
 .history{
   flex:1;
   min-height:0;
@@ -34,7 +42,7 @@ html,body{
   gap:2px;
 }
 
-/* CAPSULE */
+/* CAPSULE ROW */
 .h-row{
   position:relative;
   display:grid;
@@ -45,21 +53,39 @@ html,body{
   backdrop-filter:blur(6px);
   touch-action:pan-y;
   transition:transform .2s ease;
+  overflow:hidden;
 }
+
+/* RED DELETE BACKGROUND – HIDDEN BY DEFAULT */
 .h-row::before{
   content:"Delete";
   position:absolute;
   inset:0;
   background:#d32f2f;
   color:#fff;
+  font-size:14px;
+  font-weight:600;
   display:flex;
-  justify-content:flex-end;
   align-items:center;
+  justify-content:flex-end;
   padding-right:16px;
+  opacity:0;
+  transition:opacity .15s ease;
   z-index:0;
 }
-.h-row>*{position:relative;z-index:1}
 
+/* SHOW ONLY WHILE SWIPING */
+.h-row.swiping::before{
+  opacity:1;
+}
+
+/* CAPSULE CONTENT ABOVE RED */
+.h-row > *{
+  position:relative;
+  z-index:1;
+}
+
+/* TEXT */
 .h-exp{
   text-align:right;
   padding-right:10px;
@@ -74,12 +100,14 @@ html,body{
   border-left:1px solid rgba(0,0,0,.18);
 }
 
+/* SEPARATORS */
 .separator{
   height:1px;
   background:linear-gradient(to right,transparent,#999,transparent);
   margin:6px 0;
 }
 
+/* LIVE / TOTAL */
 .live{
   text-align:center;
   font-size:24px;
@@ -91,6 +119,7 @@ html,body{
   font-weight:700;
 }
 
+/* KEYS */
 .keys{
   flex:0 0 38%;
   display:grid;
@@ -98,6 +127,7 @@ html,body{
   gap:6px;
 }
 
+/* BUTTONS */
 button{
   height:56px;
   border:0;
@@ -113,12 +143,17 @@ button:active{
   transform:translateY(1px) scale(.97);
 }
 
+/* LANDSCAPE BLOCK */
 @media (orientation:landscape){
   body::before{
     content:"Rotate phone to vertical mode";
-    position:fixed;inset:0;
-    background:#000;color:#fff;
-    display:flex;align-items:center;justify-content:center;
+    position:fixed;
+    inset:0;
+    background:#000;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     z-index:9999;
   }
   .calc{display:none;}
