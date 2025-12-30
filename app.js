@@ -4,7 +4,7 @@ let totalEl = document.getElementById("total");
 
 let expr = "", originalExpr = "", grandTotal = 0;
 
-/* ===== TAP WRAPPER ===== */
+/* ===== TAP (NO FALSE VIBRATION) ===== */
 function tap(fn){
   let changed = fn();
   if(changed && navigator.vibrate) navigator.vibrate(15);
@@ -44,14 +44,11 @@ function formatScientific(str){
   const len = str.length;
   const exp = len - 1;
 
-  // mantissa candidates (max → min precision)
-  const candidates = [
-    str[0] + "." + str.slice(1,3), // 1.23
-    str[0] + "." + str[1],         // 1.2
-    str[0]                         // 1
-  ];
+  // mantissa fixed inside capsule
+  let m = str[0];
+  if(len > 1) m += "." + str.slice(1,3);
 
-  return `${candidates[0]}E${exp}`;
+  return `${m}E${exp}`;
 }
 
 /* ===== FIT CHECK ===== */
@@ -67,7 +64,7 @@ function fitsInElement(el, text){
   return fits;
 }
 
-/* ===== ADAPTIVE FORMAT (SUBTOTAL & TOTAL ONLY) ===== */
+/* ===== ADAPTIVE FORMAT (SUBTOTAL & TOTAL) ===== */
 function formatAdaptive(value, el){
   let str = value.toString();
   let normal = formatIN(str);
@@ -87,7 +84,7 @@ function currentNumber(){
   return expr.split(" ").pop();
 }
 
-/* ===== INPUT ===== */
+/* ===== DIGIT ===== */
 function digit(d){
   let c = currentNumber();
   if(d==="." && c.includes(".")) return false;
@@ -98,13 +95,31 @@ function digit(d){
   return true;
 }
 
+/* ===== OPERATOR (FINAL LOGIC) ===== */
 function setOp(op){
-  if(expr==="" && op==="-"){
-    expr="-"; originalExpr="-";
+  // start negative number
+  if(expr === ""){
+    if(op === "-"){
+      expr = "-";
+      originalExpr = "-";
+      updateLive();
+      return true;
+    }
+    return false;
+  }
+
+  // prevent "--"
+  if(expr === "-" && op === "-") return false;
+
+  // replace last operator
+  if(expr.endsWith(" ")){
+    expr = expr.slice(0, -3) + " " + op + " ";
+    originalExpr = originalExpr.slice(0, -3) + " " + op + " ";
     updateLive();
     return true;
   }
-  if(expr==="" || expr.endsWith(" ")) return false;
+
+  // normal operator append
   expr += " " + op + " ";
   originalExpr += " " + op + " ";
   updateLive();
@@ -132,7 +147,7 @@ function applyPercent(){
 function evaluate(e){
   let exp = e.replace(/×/g,"*").replace(/÷/g,"/");
 
-  // BigInt multiplication (integer only)
+  // BigInt multiplication for large integers
   if (/^\d+\s*\*\s*\d+$/.test(exp)) {
     let [a,b] = exp.split("*").map(s=>s.trim());
     if (a.length > 15 || b.length > 15) {
