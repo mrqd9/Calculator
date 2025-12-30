@@ -1,0 +1,134 @@
+html,body{
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  background:#1b1b1b;
+  font-family:system-ui;
+  touch-action:manipulation;
+}
+
+.calc{
+  height:100vh;
+  padding:12px;
+  box-sizing:border-box;
+  background:#2a2a2a;
+  display:flex;
+  flex-direction:column;
+}
+
+/* DISPLAY */
+.display{
+  flex:0 0 61%;
+  min-height:0;
+  background:#cfd6c8;
+  border-radius:8px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+}
+
+/* HISTORY */
+.history{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:0 4px;
+  font-size:18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.h-row{
+  display:grid;
+  grid-template-columns:1fr 160px;
+  padding:6px 12px;
+  border-radius:999px;
+}
+.h-row:nth-child(odd){background:rgba(90,120,100,0.10)}
+.h-row:nth-child(even){background:rgba(120,90,100,0.10)}
+
+.h-exp{
+  text-align:right;
+  padding-right:12px;
+  opacity:.85;
+  word-break:break-word;
+}
+.h-res{
+  text-align:right;
+  font-weight:600;
+  padding-left:12px;
+  border-left:1px solid rgba(0,0,0,0.18);
+}
+.h-row.negative .h-res{color:#b00020}
+
+/* SEPARATORS */
+.separator{
+  height:2px;
+  background:#999;
+  margin:6px 0;
+}
+
+/* LIVE / TOTAL */
+.live{
+  font-size:22px;
+  min-height:28px;
+  text-align:center;
+  color:#333;
+}
+.total{
+  font-size:32px;
+  font-weight:bold;
+  text-align:right;
+}
+
+/* KEYS */
+.keys{
+  flex:0 0 39%;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:5px;
+  margin-top:8px;
+}
+
+/* BUTTONS */
+button{
+  height:56px;
+  border:0;
+  border-radius:14px;
+  font-size:26px;
+  font-weight:600;
+  background:#444;
+  color:#fff;
+  transition:background .12s ease,transform .05s ease;
+}
+button:active{
+  background:#777;
+  transform:scale(.97);
+}
+.num{background:#5a5a5a}
+.op{background:#5c5c5c}
+.ac{background:#c14a9a}
+.eq{
+  grid-column:span 2;
+  background:#6a6a6a;
+  font-size:28px;
+}
+
+/* LANDSCAPE BLOCK */
+@media (orientation: landscape){
+  body::before{
+    content:"Rotate phone to vertical mode";
+    position:fixed;
+    inset:0;
+    background:#000;
+    color:#fff;
+    font-size:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+  }
+  .calc{display:none;}
+}
