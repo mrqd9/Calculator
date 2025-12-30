@@ -5,7 +5,7 @@ let totalEl = document.getElementById("total");
 let tokens = [];
 let grandTotal = 0;
 
-/* % helpers */
+/* % chaining helpers */
 let percentNotes = [];
 let percentBase = null;
 
@@ -106,6 +106,8 @@ function setOp(op){
   }
 
   let last = tokens[tokens.length - 1];
+
+  // starting unary minus should NOT be replaced
   if(last === "-" && tokens.length === 1) return false;
 
   if(["+","-","×","÷"].includes(last)){
@@ -118,7 +120,7 @@ function setOp(op){
   return true;
 }
 
-/* ================= PERCENT (CHAINING ENABLED) ================= */
+/* ================= PERCENT (WITH CHAINING) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -240,25 +242,66 @@ function clearAll(){
   return true;
 }
 
-/* ================= SWIPE TO DELETE (UNCHANGED) ================= */
+/* ================= LONG PRESS BACKSPACE ================= */
+let cutTimer = null;
+let cutLongPress = false;
+
+function cutPressStart(e){
+  e.preventDefault();
+  cutLongPress = false;
+
+  cutTimer = setTimeout(()=>{
+    if(tokens.length > 0){
+      tokens = [];
+      percentNotes = [];
+      percentBase = null;
+      updateLive();
+      if(navigator.vibrate) navigator.vibrate(25);
+    }
+    cutLongPress = true;
+  }, 450);
+}
+
+function cutPressEnd(e){
+  e.preventDefault();
+  clearTimeout(cutTimer);
+
+  if(!cutLongPress){
+    let ok = back();
+    if(ok && navigator.vibrate) navigator.vibrate(15);
+  }
+}
+
+function cutPressCancel(){
+  clearTimeout(cutTimer);
+}
+
+/* ================= SWIPE TO DELETE (STABLE RED BG) ================= */
 function enableSwipe(row){
-  let startX = 0, dx = 0, dragging = false;
+  let startX = 0;
+  let dx = 0;
+  let dragging = false;
 
   row.addEventListener("pointerdown", e=>{
     startX = e.clientX;
     dragging = true;
+    row.classList.add("swiping");
     row.style.transition = "none";
+    row.style.willChange = "transform";
   });
 
   row.addEventListener("pointermove", e=>{
     if(!dragging) return;
     dx = e.clientX - startX;
-    if(dx < 0) row.style.transform = `translateX(${dx}px)`;
+    if(dx < 0){
+      row.style.transform = `translateX(${dx}px)`;
+    }
   });
 
   row.addEventListener("pointerup", ()=>{
     dragging = false;
     row.style.transition = "transform .25s ease";
+    row.style.willChange = "auto";
 
     if(Math.abs(dx) > row.offsetWidth * 0.35){
       let val = Number(row.dataset.value);
@@ -269,11 +312,20 @@ function enableSwipe(row){
         else totalEl.classList.remove("negative");
       }
       row.style.transform = "translateX(-100%)";
+      if(navigator.vibrate) navigator.vibrate(20);
       setTimeout(()=>row.remove(),200);
     }else{
       row.style.transform = "translateX(0)";
+      row.classList.remove("swiping");
     }
     dx = 0;
+  });
+
+  row.addEventListener("pointercancel", ()=>{
+    dragging = false;
+    row.style.transform = "translateX(0)";
+    row.style.willChange = "auto";
+    row.classList.remove("swiping");
   });
 }
 
