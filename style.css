@@ -1,33 +1,39 @@
-/* ===== BASE ===== */
+/* ===== RESET / BASE ===== */
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
 html,body{
   margin:0;
   height:100%;
   overflow:hidden;
-  background:#1b1b1b;
-  font-family:system-ui;
+  background:#181818;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
   touch-action:manipulation;
 }
 
 /* ===== APP CONTAINER ===== */
 .calc{
-  height:100vh;
-  height:100svh;
+  height:100dvh;
   padding:12px;
-  box-sizing:border-box;
-  background:#2a2a2a;
+  background:#202020;
   display:flex;
   flex-direction:column;
+  gap:10px;
 }
 
-/* ===== DISPLAY (AUTO HEIGHT) ===== */
+/* ===== DISPLAY CARD ===== */
 .display{
   flex:1;
   min-height:0;
-  background:#cfd6c8;
-  border-radius:8px;
-  padding:12px;
+  background:linear-gradient(180deg,#e6ede3,#cfd6c8);
+  border-radius:18px;
+  padding:14px;
   display:flex;
   flex-direction:column;
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.45);
 }
 
 /* ===== HISTORY ===== */
@@ -37,100 +43,117 @@ html,body{
   overflow-y:auto;
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:2px;
   padding:0 4px;
-  font-size:18px;
   font-variant-numeric:tabular-nums;
 }
 
+/* CAPSULE */
 .h-row{
   display:grid;
   grid-template-columns:1fr 160px;
   padding:4px 12px;
   border-radius:999px;
+  background:rgba(255,255,255,.38);
+  backdrop-filter:blur(6px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.45),
+    0 1px 2px rgba(0,0,0,.10);
 }
-.h-row:nth-child(odd){background:rgba(90,120,100,.12)}
-.h-row:nth-child(even){background:rgba(120,90,100,.12)}
-
 .h-exp{
   text-align:right;
-  padding-right:12px;
-  opacity:.85;
+  padding-right:10px;
+  font-size:16px;
+  opacity:.7;
   word-break:break-word;
 }
 .h-res{
   text-align:right;
+  padding-left:10px;
+  font-size:18px;
   font-weight:600;
-  padding-left:12px;
   border-left:1px solid rgba(0,0,0,.18);
 }
-.h-row.negative .h-res{color:#b00020}
+.h-row.negative .h-res{
+  color:#b00020;
+}
 
 /* ===== SEPARATORS ===== */
 .separator{
-  height:2px;
-  background:#999;
+  height:1px;
+  background:linear-gradient(to right,transparent,#999,transparent);
   margin:6px 0;
 }
 
-/* ===== LIVE / TOTAL ===== */
+/* ===== LIVE INPUT ===== */
 .live{
-  font-size:22px;
-  min-height:28px;
+  min-height:30px;
   text-align:center;
+  font-size:24px;
+  font-weight:500;
+  letter-spacing:.5px;
   color:#333;
 }
+
+/* ===== GRAND TOTAL ===== */
 .total{
-  font-size:32px;
-  font-weight:bold;
   text-align:right;
+  font-size:34px;
+  font-weight:700;
   font-variant-numeric:tabular-nums;
+  color:#000;
 }
 
-/* ===== KEYS (FIXED HEIGHT, EVEN GRID) ===== */
+/* ===== KEYS AREA (FIXED HEIGHT) ===== */
 .keys{
-  height:360px;
+  flex:0 0 38%;
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  grid-template-rows:repeat(5,1fr);
-  gap:8px;
-  margin-top:8px;
-
-  /* Android / iOS safe */
-  padding-bottom: env(safe-area-inset-bottom,16px);
+  gap:6px;
 }
 
 /* ===== BUTTONS ===== */
 button{
-  width:100%;
-  height:100%;
+  height:56px;
   border:0;
-  border-radius:16px;
+  border-radius:18px;
   font-size:26px;
   font-weight:600;
-  background:#444;
   color:#fff;
-  transition:background .12s ease, transform .05s ease;
+  background:linear-gradient(180deg,#5a5a5a,#3f3f3f);
+  box-shadow:
+    0 5px 12px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.18);
+  transition:
+    transform .06s ease,
+    box-shadow .06s ease,
+    filter .06s ease;
+  user-select:none;
 }
 button:active{
-  background:#777;
-  transform:scale(.97);
+  transform:translateY(1px) scale(.97);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,.35),
+    inset 0 2px 4px rgba(0,0,0,.4);
+  filter:brightness(1.1);
 }
 
-.num{background:#5a5a5a}
-.op{background:#5c5c5c}
-.ac{background:#c14a9a}
+/* BUTTON COLORS */
+.num{
+  background:linear-gradient(180deg,#606060,#484848);
+}
+.op{
+  background:linear-gradient(180deg,#6b6b6b,#525252);
+}
+.ac{
+  background:linear-gradient(180deg,#d05aa8,#b6468e);
+}
 .eq{
   grid-column:span 2;
-  background:#6a6a6a;
   font-size:28px;
+  background:linear-gradient(180deg,#7a7a7a,#5f5f5f);
 }
-.keys,
-button{
-  -webkit-user-select:none;
-  user-select:none;
-  -webkit-touch-callout:none;
-}
+
 /* ===== LANDSCAPE BLOCK ===== */
 @media (orientation:landscape){
   body::before{
