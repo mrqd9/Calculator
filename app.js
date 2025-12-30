@@ -1,12 +1,12 @@
-let historyEl=document.getElementById("history");
-let liveEl=document.getElementById("live");
-let totalEl=document.getElementById("total");
+let historyEl = document.getElementById("history");
+let liveEl = document.getElementById("live");
+let totalEl = document.getElementById("total");
 
-let expr="", originalExpr="", grandTotal=0;
+let expr = "", originalExpr = "", grandTotal = 0;
 
-/* TAP */
+/* HAPTIC */
 function tap(fn){
-  let changed=fn();
+  let changed = fn();
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
@@ -17,12 +17,12 @@ function scrollHistoryToBottom(){
   });
 }
 
-/* HELPERS */
+/* CLEAN FLOAT */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
 }
 
-/* INDIAN FORMAT */
+/* FORMAT (INDIAN) */
 function formatIN(str){
   if(str===""||str==="-") return str;
   str=str.toString();
@@ -59,49 +59,78 @@ function fits(el,text){
   return ok;
 }
 
-/* ADAPTIVE */
+/* ADAPTIVE FORMAT */
 function formatAdaptive(val,el){
   let s=val.toString();
   let n=formatIN(s);
   return fits(el,n)?n:formatScientific(s);
 }
 
-/* LIVE UPDATE WITH CARET */
+/* LIVE WITH CARET */
 function updateLive(){
   let text = expr.split(" ")
     .map(p=>/[0-9]/.test(p)?formatIN(p):p)
     .join(" ");
 
-  if(text===""){
-    liveEl.innerHTML=`<span class="caret"></span>`;
-  }else{
-    liveEl.innerHTML=`${text}<span class="caret"></span>`;
-  }
+  liveEl.innerHTML = text
+    ? `${text}<span class="caret"></span>`
+    : `<span class="caret"></span>`;
 }
 
 function currentNumber(){
   return expr.split(" ").pop();
 }
 
-/* DIGIT INPUT (FIXED - ISSUE) */
+/* DIGIT (FINAL LOGIC incl auto 0.) */
 function digit(d){
-  let c=currentNumber();
+  let c = currentNumber();
 
-  /* if just "-" then append digit */
-  if(c === "-"){
-    expr += d;
-    originalExpr += d;
+  /* START NEGATIVE */
+  if(expr === "-" && c === "-"){
+    if(d === "."){
+      expr = "-0.";
+      originalExpr = "-0.";
+    }else{
+      expr = "-" + d;
+      originalExpr = "-" + d;
+    }
     updateLive();
     return true;
   }
 
-  if(d==="." && c.includes(".")) return false;
+  /* DOT PRESSED FIRST → auto 0. */
+  if(d === "." && (c === "" || c === undefined)){
+    expr += "0.";
+    originalExpr += "0.";
+    updateLive();
+    return true;
+  }
 
+  /* DOT AFTER OPERATOR → auto 0. */
+  if(d === "." && c === ""){
+    expr += "0.";
+    originalExpr += "0.";
+    updateLive();
+    return true;
+  }
+
+  /* DOT AFTER "-" → auto -0. */
+  if(d === "." && c === "-"){
+    expr += "0.";
+    originalExpr += "0.";
+    updateLive();
+    return true;
+  }
+
+  /* PREVENT DOUBLE DOT */
+  if(d === "." && c.includes(".")) return false;
+
+  /* LENGTH LIMIT (ignore leading -) */
   let pure = c.startsWith("-") ? c.slice(1) : c;
-  if(d!=="." && pure.replace(".","").length>=12) return false;
+  if(d !== "." && pure.replace(".","").length >= 12) return false;
 
-  expr+=d;
-  originalExpr+=d;
+  expr += d;
+  originalExpr += d;
   updateLive();
   return true;
 }
@@ -109,17 +138,23 @@ function digit(d){
 /* OPERATOR */
 function setOp(op){
   if(expr===""){
-    if(op==="-"){expr="-"; originalExpr="-"; updateLive(); return true;}
+    if(op==="-"){
+      expr="-";
+      originalExpr="-";
+      updateLive();
+      return true;
+    }
     return false;
   }
+
   if(expr==="-" && op==="-") return false;
 
   if(expr.endsWith(" ")){
-    expr=expr.slice(0,-3)+" "+op+" ";
-    originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
+    expr = expr.slice(0,-3)+" "+op+" ";
+    originalExpr = originalExpr.slice(0,-3)+" "+op+" ";
   }else{
-    expr+=" "+op+" ";
-    originalExpr+=" "+op+" ";
+    expr += " "+op+" ";
+    originalExpr += " "+op+" ";
   }
   updateLive();
   return true;
@@ -127,8 +162,9 @@ function setOp(op){
 
 /* PERCENT */
 function applyPercent(){
-  let p=expr.trim().split(" ");
+  let p = expr.trim().split(" ");
   if(p.length<3) return false;
+
   let A=+p[0], op=p[1], B=+p[2];
   if(isNaN(A)||isNaN(B)) return false;
 
@@ -178,7 +214,6 @@ function enter(){
   else totalEl.classList.remove("negative");
 
   scrollHistoryToBottom();
-
   expr=""; originalExpr="";
   updateLive();
   return true;
@@ -197,7 +232,7 @@ function deleteRow(row){
   scrollHistoryToBottom();
 }
 
-/* SWIPE TO DELETE */
+/* SWIPE */
 function enableSwipe(row){
   let sx=0, dx=0, drag=false;
 
@@ -236,7 +271,7 @@ function enableSwipe(row){
   });
 }
 
-/* BACKSPACE */
+/* BACK */
 function back(){
   if(expr==="") return false;
   expr=expr.slice(0,-1);
@@ -247,7 +282,7 @@ function back(){
 
 /* CLEAR */
 function clearAll(){
-  if(expr==="" && historyEl.innerHTML==="") return false;
+  if(expr===""&&historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
   historyEl.innerHTML="";
   updateLive();
