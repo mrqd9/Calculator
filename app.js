@@ -1,12 +1,12 @@
-let historyEl = document.getElementById("history");
-let liveEl = document.getElementById("live");
-let totalEl = document.getElementById("total");
+let historyEl=document.getElementById("history");
+let liveEl=document.getElementById("live");
+let totalEl=document.getElementById("total");
 
 let expr="", originalExpr="", grandTotal=0;
 
 /* TAP */
 function tap(fn){
-  let changed = fn();
+  let changed=fn();
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
@@ -40,7 +40,7 @@ function formatScientific(str){
 }
 
 /* FIT CHECK */
-function fitsInElement(el,text){
+function fits(el,text){
   let s=document.createElement("span");
   s.style.visibility="hidden";
   s.style.whiteSpace="nowrap";
@@ -55,9 +55,8 @@ function fitsInElement(el,text){
 /* ADAPTIVE FORMAT */
 function formatAdaptive(val,el){
   let s=val.toString();
-  let normal=formatIN(s);
-  if(fitsInElement(el,normal)) return normal;
-  return formatScientific(s);
+  let n=formatIN(s);
+  return fits(el,n)?n:formatScientific(s);
 }
 
 /* LIVE */
@@ -78,7 +77,7 @@ function digit(d){
   expr+=d; originalExpr+=d; updateLive(); return true;
 }
 
-/* OPERATOR */
+/* OPERATOR (REPLACE LOGIC) */
 function setOp(op){
   if(expr===""){
     if(op==="-"){expr="-"; originalExpr="-"; updateLive(); return true;}
@@ -106,12 +105,13 @@ function applyPercent(){
   updateLive(); return true;
 }
 
-/* EVALUATE */
+/* EVAL */
 function evaluate(e){
   let ex=e.replace(/×/g,"*").replace(/÷/g,"/");
   if(/^\d+\s*\*\s*\d+$/.test(ex)){
     let[a,b]=ex.split("*").map(s=>s.trim());
-    if(a.length>15||b.length>15) return (BigInt(a)*BigInt(b)).toString();
+    if(a.length>15||b.length>15)
+      return (BigInt(a)*BigInt(b)).toString();
   }
   return clean(Function("return "+ex)());
 }
@@ -134,7 +134,7 @@ function enter(){
   let res=row.querySelector(".h-res");
   res.innerText=formatAdaptive(r,res);
 
-  enableSwipeToDelete(row);
+  enableSwipe(row);
 
   grandTotal=clean(grandTotal+Number(r));
   totalEl.innerText=formatAdaptive(grandTotal.toFixed(2),totalEl);
@@ -153,7 +153,7 @@ function deleteRow(row){
 }
 
 /* SWIPE TO DELETE */
-function enableSwipeToDelete(row){
+function enableSwipe(row){
   let sx=0, dx=0, drag=false;
 
   row.addEventListener("pointerdown",e=>{
