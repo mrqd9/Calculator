@@ -10,7 +10,7 @@ function tap(fn){
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
-/* AUTO SCROLL (KEY FIX) */
+/* AUTO SCROLL */
 function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{
     historyEl.scrollTop = historyEl.scrollHeight;
@@ -66,22 +66,44 @@ function formatAdaptive(val,el){
   return fits(el,n)?n:formatScientific(s);
 }
 
-/* LIVE */
+/* LIVE UPDATE WITH CARET */
 function updateLive(){
-  liveEl.innerText=expr.split(" ")
+  let text = expr.split(" ")
     .map(p=>/[0-9]/.test(p)?formatIN(p):p)
     .join(" ");
+
+  if(text===""){
+    liveEl.innerHTML=`<span class="caret"></span>`;
+  }else{
+    liveEl.innerHTML=`${text}<span class="caret"></span>`;
+  }
 }
+
 function currentNumber(){
   return expr.split(" ").pop();
 }
 
-/* INPUT */
+/* DIGIT INPUT (FIXED - ISSUE) */
 function digit(d){
   let c=currentNumber();
-  if(d==="."&&c.includes(".")) return false;
-  if(d!=="."&&c.replace("-","").replace(".","").length>=12) return false;
-  expr+=d; originalExpr+=d; updateLive(); return true;
+
+  /* if just "-" then append digit */
+  if(c === "-"){
+    expr += d;
+    originalExpr += d;
+    updateLive();
+    return true;
+  }
+
+  if(d==="." && c.includes(".")) return false;
+
+  let pure = c.startsWith("-") ? c.slice(1) : c;
+  if(d!=="." && pure.replace(".","").length>=12) return false;
+
+  expr+=d;
+  originalExpr+=d;
+  updateLive();
+  return true;
 }
 
 /* OPERATOR */
@@ -90,14 +112,17 @@ function setOp(op){
     if(op==="-"){expr="-"; originalExpr="-"; updateLive(); return true;}
     return false;
   }
-  if(expr==="-"&&op==="-") return false;
+  if(expr==="-" && op==="-") return false;
+
   if(expr.endsWith(" ")){
     expr=expr.slice(0,-3)+" "+op+" ";
     originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
-    updateLive(); return true;
+  }else{
+    expr+=" "+op+" ";
+    originalExpr+=" "+op+" ";
   }
-  expr+=" "+op+" "; originalExpr+=" "+op+" ";
-  updateLive(); return true;
+  updateLive();
+  return true;
 }
 
 /* PERCENT */
@@ -106,13 +131,15 @@ function applyPercent(){
   if(p.length<3) return false;
   let A=+p[0], op=p[1], B=+p[2];
   if(isNaN(A)||isNaN(B)) return false;
+
   originalExpr+=" %";
   let v=(op==="+"||op==="-"||op==="−")?A*B/100:B/100;
   expr=`${A} ${op} ${v}`;
-  updateLive(); return true;
+  updateLive();
+  return true;
 }
 
-/* EVAL */
+/* EVALUATE */
 function evaluate(e){
   let ex=e.replace(/×/g,"*").replace(/÷/g,"/");
   if(/^\d+\s*\*\s*\d+$/.test(ex)){
@@ -126,6 +153,7 @@ function evaluate(e){
 /* ENTER */
 function enter(){
   if(expr===""||expr==="-"||expr==="−") return false;
+
   let r;
   try{r=evaluate(expr);}catch{return false;}
 
@@ -149,12 +177,14 @@ function enter(){
   if(grandTotal<0) totalEl.classList.add("negative");
   else totalEl.classList.remove("negative");
 
-  scrollHistoryToBottom();   /* ⭐ auto-scroll */
+  scrollHistoryToBottom();
 
-  expr=""; originalExpr=""; updateLive(); return true;
+  expr=""; originalExpr="";
+  updateLive();
+  return true;
 }
 
-/* DELETE */
+/* DELETE ROW */
 function deleteRow(row){
   let v=Number(row.dataset.value);
   if(!isNaN(v)){
@@ -167,12 +197,13 @@ function deleteRow(row){
   scrollHistoryToBottom();
 }
 
-/* SWIPE */
+/* SWIPE TO DELETE */
 function enableSwipe(row){
   let sx=0, dx=0, drag=false;
 
   row.addEventListener("pointerdown",e=>{
-    sx=e.clientX; drag=true;
+    sx=e.clientX;
+    drag=true;
     row.classList.add("swiping");
     row.style.transition="none";
   });
@@ -187,6 +218,7 @@ function enableSwipe(row){
     drag=false;
     row.classList.remove("swiping");
     row.style.transition="transform .2s ease";
+
     if(Math.abs(dx)>row.offsetWidth*0.35){
       row.style.transform="translateX(-100%)";
       setTimeout(()=>deleteRow(row),200);
@@ -204,18 +236,26 @@ function enableSwipe(row){
   });
 }
 
-/* BACK & CLEAR */
+/* BACKSPACE */
 function back(){
   if(expr==="") return false;
-  expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1);
-  updateLive(); return true;
+  expr=expr.slice(0,-1);
+  originalExpr=originalExpr.slice(0,-1);
+  updateLive();
+  return true;
 }
+
+/* CLEAR */
 function clearAll(){
-  if(expr===""&&historyEl.innerHTML==="") return false;
+  if(expr==="" && historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
   historyEl.innerHTML="";
-  updateLive(); totalEl.innerText="0.00";
+  updateLive();
+  totalEl.innerText="0.00";
   totalEl.classList.remove("negative");
   scrollHistoryToBottom();
   return true;
 }
+
+/* INIT */
+updateLive();
