@@ -21,7 +21,14 @@
   </div>
   <div class="keys">
     <button class="ac" onclick="tap(clearAll)">AC</button>
-    <button class="op" onclick="tap(back)">⌫</button>
+    <button class="op"
+  onmousedown="cutPressStart()"
+  onmouseup="cutPressEnd()"
+  onmouseleave="cutPressCancel()"
+  ontouchstart="cutPressStart()"
+  ontouchend="cutPressEnd()"
+  ontouchcancel="cutPressCancel()">
+  ⌫</button> 
     <button class="op" onclick="tap(applyPercent)">%</button>
     <button class="op" onclick="tap(()=>setOp('÷'))">÷</button>
 
