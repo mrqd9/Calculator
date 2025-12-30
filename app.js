@@ -2,10 +2,16 @@ let historyEl = document.getElementById("history");
 let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 
-let tokens = [];        // expression as tokens
+let tokens = [];
 let grandTotal = 0;
 
-/* ===== HELPERS ===== */
+/* ========= TAP WRAPPER ========= */
+function tap(fn){
+  let ok = fn();
+  if(ok && navigator.vibrate) navigator.vibrate(15);
+}
+
+/* ========= HELPERS ========= */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
 }
@@ -16,7 +22,7 @@ function scrollHistoryToBottom(){
   });
 }
 
-/* ===== FORMAT ===== */
+/* ========= FORMAT ========= */
 function formatIN(str){
   if(str===""||str==="-") return str;
   let [i,d]=str.split(".");
@@ -27,7 +33,7 @@ function formatIN(str){
   return d?out+"."+d:out;
 }
 
-/* ===== LIVE ===== */
+/* ========= LIVE ========= */
 function updateLive(){
   let text = tokens.map(t=>/^\d|\-/.test(t)?formatIN(t):t).join(" ");
   liveEl.innerHTML = text
@@ -35,35 +41,27 @@ function updateLive(){
     : `<span class="caret"></span>`;
 }
 
-/* ===== DIGIT INPUT (FINAL FIX) ===== */
+/* ========= DIGIT ========= */
 function digit(d){
   let last = tokens[tokens.length-1];
 
-  /* START */
   if(tokens.length===0){
-    if(d==="."){tokens.push("0.");}
-    else tokens.push(d);
+    tokens.push(d==="." ? "0." : d);
     updateLive(); return true;
   }
 
-  /* NEGATIVE START */
-  if(last === "-" && tokens.length===1){
-    if(d===".") tokens[0] = "-0.";
-    else tokens[0] = "-"+d;
+  if(last==="-" && tokens.length===1){
+    tokens[0] = d==="." ? "-0." : "-"+d;
     updateLive(); return true;
   }
 
-  /* AFTER OPERATOR */
   if(["+","-","×","÷"].includes(last)){
-    if(d===".") tokens.push("0.");
-    else tokens.push(d);
+    tokens.push(d==="." ? "0." : d);
     updateLive(); return true;
   }
 
-  /* PREVENT DOUBLE DOT */
   if(d==="." && last.includes(".")) return false;
 
-  /* LENGTH LIMIT */
   let pure = last.replace("-","").replace(".","");
   if(d!=="." && pure.length>=12) return false;
 
@@ -72,10 +70,10 @@ function digit(d){
   return true;
 }
 
-/* ===== OPERATOR ===== */
+/* ========= OPERATOR ========= */
 function setOp(op){
   if(tokens.length===0){
-    if(op==="-"){tokens.push("-");updateLive();return true;}
+    if(op==="-"){ tokens.push("-"); updateLive(); return true; }
     return false;
   }
   let last=tokens[tokens.length-1];
@@ -88,7 +86,12 @@ function setOp(op){
   return true;
 }
 
-/* ===== EVALUATE ===== */
+/* ========= PERCENT (TEMP SAFE) ========= */
+function applyPercent(){
+  return false; // disable for now (no crash)
+}
+
+/* ========= EVALUATE ========= */
 function evaluate(){
   let exp=tokens.join(" ")
     .replace(/×/g,"*")
@@ -96,11 +99,12 @@ function evaluate(){
   return clean(Function("return "+exp)());
 }
 
-/* ===== ENTER ===== */
+/* ========= ENTER ========= */
 function enter(){
   if(tokens.length===0) return false;
+
   let r;
-  try{r=evaluate();}catch{return false;}
+  try{ r=evaluate(); }catch{ return false; }
 
   let row=document.createElement("div");
   row.className="h-row";
@@ -122,7 +126,7 @@ function enter(){
   return true;
 }
 
-/* ===== BACK ===== */
+/* ========= BACK ========= */
 function back(){
   if(tokens.length===0) return false;
   let last=tokens[tokens.length-1];
@@ -132,7 +136,7 @@ function back(){
   return true;
 }
 
-/* ===== CLEAR ===== */
+/* ========= CLEAR ========= */
 function clearAll(){
   tokens=[];
   grandTotal=0;
