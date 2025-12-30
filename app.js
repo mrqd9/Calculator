@@ -41,15 +41,12 @@ function formatIN(str){
 
 /* ================= TOKEN DISPLAY FORMAT ================= */
 function formatTokenForDisplay(t){
-  // Unary minus number: "-5" → "- 5"
   if(/^-\d/.test(t)){
     return "- " + formatIN(t.slice(1));
   }
-  // Normal number
   if(/^\d/.test(t)){
     return formatIN(t);
   }
-  // Operator
   return t;
 }
 
@@ -66,31 +63,26 @@ function updateLive(){
 function digit(d){
   let last = tokens[tokens.length - 1];
 
-  // First input
   if(tokens.length === 0){
     tokens.push(d === "." ? "0." : d);
     updateLive();
     return true;
   }
 
-  // Starting negative number
   if(last === "-" && tokens.length === 1){
     tokens[0] = (d === ".") ? "-0." : "-" + d;
     updateLive();
     return true;
   }
 
-  // After operator
   if(["+","-","×","÷"].includes(last)){
     tokens.push(d === "." ? "0." : d);
     updateLive();
     return true;
   }
 
-  // Prevent double dot
   if(d === "." && last.includes(".")) return false;
 
-  // Length limit (ignore - and .)
   let pure = last.replace("-","").replace(".","");
   if(d !== "." && pure.length >= 12) return false;
 
@@ -99,8 +91,9 @@ function digit(d){
   return true;
 }
 
-/* ================= OPERATOR ================= */
+/* ================= OPERATOR (FIXED) ================= */
 function setOp(op){
+  // No operator allowed at start except unary minus
   if(tokens.length === 0){
     if(op === "-"){
       tokens.push("-");
@@ -111,6 +104,13 @@ function setOp(op){
   }
 
   let last = tokens[tokens.length - 1];
+
+  // ❌ Do NOT replace starting unary minus
+  if(last === "-" && tokens.length === 1){
+    return false;
+  }
+
+  // Replace only binary operators
   if(["+","-","×","÷"].includes(last)){
     tokens[tokens.length - 1] = op;
   }else{
