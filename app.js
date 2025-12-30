@@ -4,18 +4,18 @@ let totalEl = document.getElementById("total");
 
 let expr = "", originalExpr = "", grandTotal = 0;
 
-/* ===== TAP WRAPPER (NO FALSE VIBRATION) ===== */
+/* ===== TAP WRAPPER ===== */
 function tap(fn){
   let changed = fn();
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
-/* ===== FORMAT HELPERS ===== */
+/* ===== HELPERS ===== */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
 }
 
-/* Indian format (STRING SAFE) */
+/* ===== INDIAN FORMAT (STRING SAFE) ===== */
 function formatIN(str){
   if(str === "" || str === "-") return str;
   str = str.toString();
@@ -36,16 +36,25 @@ function formatIN(str){
   return decPart ? intPart + "." + decPart : intPart;
 }
 
-/* Scientific notation (STRING SAFE) */
+/* ===== SCIENTIFIC FORMAT (CAPSULE SAFE) ===== */
 function formatScientific(str){
   str = str.replace(/\D/g,"");
   if(!str) return "0";
-  let len = str.length;
-  let mantissa = str.slice(0,3);
-  return `${mantissa[0]}.${mantissa.slice(1)}E${len-1}`;
+
+  const len = str.length;
+  const exp = len - 1;
+
+  // mantissa candidates (max → min precision)
+  const candidates = [
+    str[0] + "." + str.slice(1,3), // 1.23
+    str[0] + "." + str[1],         // 1.2
+    str[0]                         // 1
+  ];
+
+  return `${candidates[0]}E${exp}`;
 }
 
-/* Does text fit inside element width? */
+/* ===== FIT CHECK ===== */
 function fitsInElement(el, text){
   const test = document.createElement("span");
   test.style.visibility = "hidden";
@@ -53,12 +62,12 @@ function fitsInElement(el, text){
   test.style.font = getComputedStyle(el).font;
   test.innerText = text;
   document.body.appendChild(test);
-  let fits = test.offsetWidth <= el.clientWidth;
+  const fits = test.offsetWidth <= el.clientWidth;
   document.body.removeChild(test);
   return fits;
 }
 
-/* Adaptive formatter (NORMAL → E when space over) */
+/* ===== ADAPTIVE FORMAT (SUBTOTAL & TOTAL ONLY) ===== */
 function formatAdaptive(value, el){
   let str = value.toString();
   let normal = formatIN(str);
@@ -66,7 +75,7 @@ function formatAdaptive(value, el){
   return formatScientific(str);
 }
 
-/* ===== LIVE DISPLAY (NO E HERE) ===== */
+/* ===== LIVE DISPLAY (NO SCIENTIFIC) ===== */
 function updateLive(){
   liveEl.innerText = expr
     .split(" ")
@@ -119,11 +128,19 @@ function applyPercent(){
   return true;
 }
 
-/* ===== EVALUATE ===== */
+/* ===== EVALUATE (BIGINT SAFE) ===== */
 function evaluate(e){
-  return clean(
-    Function("return " + e.replace(/×/g,"*").replace(/÷/g,"/"))()
-  );
+  let exp = e.replace(/×/g,"*").replace(/÷/g,"/");
+
+  // BigInt multiplication (integer only)
+  if (/^\d+\s*\*\s*\d+$/.test(exp)) {
+    let [a,b] = exp.split("*").map(s=>s.trim());
+    if (a.length > 15 || b.length > 15) {
+      return (BigInt(a) * BigInt(b)).toString();
+    }
+  }
+
+  return clean(Function("return " + exp)());
 }
 
 /* ===== ENTER ===== */
@@ -135,7 +152,7 @@ function enter(){
   catch{ return false; }
 
   let row = document.createElement("div");
-  row.className = "h-row" + (r < 0 ? " negative" : "");
+  row.className = "h-row" + (Number(r) < 0 ? " negative" : "");
   row.innerHTML = `
     <span class="h-exp">${originalExpr} =</span>
     <span class="h-res"></span>
@@ -147,7 +164,7 @@ function enter(){
 
   historyEl.scrollTop = historyEl.scrollHeight;
 
-  grandTotal = clean(grandTotal + r);
+  grandTotal = clean(grandTotal + Number(r));
   totalEl.innerText = formatAdaptive(grandTotal.toFixed(2), totalEl);
 
   expr = ""; originalExpr = "";
@@ -174,7 +191,7 @@ function clearAll(){
   return true;
 }
 
-/* ===== LONG PRESS CUT (NO FALSE VIBRATION) ===== */
+/* ===== LONG PRESS CUT ===== */
 let cutTimer = null;
 let cutLongPress = false;
 
