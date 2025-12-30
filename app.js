@@ -2,69 +2,67 @@ let historyEl = document.getElementById("history");
 let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 
-let expr = "", originalExpr = "", grandTotal = 0;
+let expr="", originalExpr="", grandTotal=0;
 
-/* ===== TAP ===== */
+/* TAP */
 function tap(fn){
   let changed = fn();
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
-/* ===== HELPERS ===== */
+/* HELPERS */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
 }
 
-/* ===== INDIAN FORMAT ===== */
+/* INDIAN FORMAT */
 function formatIN(str){
-  if(str === "" || str === "-") return str;
-  str = str.toString();
-  let [i,d] = str.split(".");
-  i = i.replace(/\D/g,"");
-  let last3 = i.slice(-3);
-  let rest = i.slice(0,-3);
+  if(str===""||str==="-") return str;
+  str=str.toString();
+  let [i,d]=str.split(".");
+  i=i.replace(/\D/g,"");
+  let last3=i.slice(-3), rest=i.slice(0,-3);
   if(rest){
-    rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
-    i = rest + "," + last3;
-  } else i = last3;
-  return d ? i+"."+d : i;
+    rest=rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+    i=rest+","+last3;
+  }else i=last3;
+  return d?i+"."+d:i;
 }
 
-/* ===== SCIENTIFIC ===== */
+/* SCIENTIFIC */
 function formatScientific(str){
-  str = str.replace(/\D/g,"");
+  str=str.replace(/\D/g,"");
   if(!str) return "0";
-  let exp = str.length - 1;
-  let m = str[0];
-  if(str.length > 1) m += "." + str.slice(1,3);
+  let exp=str.length-1;
+  let m=str[0];
+  if(str.length>1) m+="."+str.slice(1,3);
   return `${m}E${exp}`;
 }
 
-/* ===== FIT CHECK ===== */
-function fitsInElement(el, text){
-  let s = document.createElement("span");
+/* FIT CHECK */
+function fitsInElement(el,text){
+  let s=document.createElement("span");
   s.style.visibility="hidden";
   s.style.whiteSpace="nowrap";
   s.style.font=getComputedStyle(el).font;
   s.innerText=text;
   document.body.appendChild(s);
-  let ok = s.offsetWidth <= el.clientWidth;
+  let ok=s.offsetWidth<=el.clientWidth;
   document.body.removeChild(s);
   return ok;
 }
 
-/* ===== ADAPTIVE ===== */
-function formatAdaptive(val, el){
-  let s = val.toString();
-  let normal = formatIN(s);
-  if(fitsInElement(el, normal)) return normal;
+/* ADAPTIVE FORMAT */
+function formatAdaptive(val,el){
+  let s=val.toString();
+  let normal=formatIN(s);
+  if(fitsInElement(el,normal)) return normal;
   return formatScientific(s);
 }
 
-/* ===== LIVE ===== */
+/* LIVE */
 function updateLive(){
-  liveEl.innerText = expr
-    .split(" ")
+  liveEl.innerText=expr.split(" ")
     .map(p=>/[0-9]/.test(p)?formatIN(p):p)
     .join(" ");
 }
@@ -72,32 +70,33 @@ function currentNumber(){
   return expr.split(" ").pop();
 }
 
-/* ===== INPUT ===== */
+/* INPUT */
 function digit(d){
-  let c = currentNumber();
-  if(d==="." && c.includes(".")) return false;
-  if(d!=="." && c.replace("-","").replace(".","").length>=12) return false;
+  let c=currentNumber();
+  if(d==="."&&c.includes(".")) return false;
+  if(d!=="."&&c.replace("-","").replace(".","").length>=12) return false;
   expr+=d; originalExpr+=d; updateLive(); return true;
 }
 
+/* OPERATOR */
 function setOp(op){
   if(expr===""){
     if(op==="-"){expr="-"; originalExpr="-"; updateLive(); return true;}
     return false;
   }
-  if(expr==="-" && op==="-") return false;
+  if(expr==="-"&&op==="-") return false;
   if(expr.endsWith(" ")){
-    expr = expr.slice(0,-3)+" "+op+" ";
-    originalExpr = originalExpr.slice(0,-3)+" "+op+" ";
+    expr=expr.slice(0,-3)+" "+op+" ";
+    originalExpr=originalExpr.slice(0,-3)+" "+op+" ";
     updateLive(); return true;
   }
   expr+=" "+op+" "; originalExpr+=" "+op+" ";
   updateLive(); return true;
 }
 
-/* ===== PERCENT ===== */
+/* PERCENT */
 function applyPercent(){
-  let p = expr.trim().split(" ");
+  let p=expr.trim().split(" ");
   if(p.length<3) return false;
   let A=+p[0], op=p[1], B=+p[2];
   if(isNaN(A)||isNaN(B)) return false;
@@ -107,17 +106,17 @@ function applyPercent(){
   updateLive(); return true;
 }
 
-/* ===== EVAL ===== */
+/* EVALUATE */
 function evaluate(e){
   let ex=e.replace(/×/g,"*").replace(/÷/g,"/");
   if(/^\d+\s*\*\s*\d+$/.test(ex)){
-    let [a,b]=ex.split("*").map(s=>s.trim());
+    let[a,b]=ex.split("*").map(s=>s.trim());
     if(a.length>15||b.length>15) return (BigInt(a)*BigInt(b)).toString();
   }
   return clean(Function("return "+ex)());
 }
 
-/* ===== ENTER ===== */
+/* ENTER */
 function enter(){
   if(expr===""||expr==="-"||expr==="−") return false;
   let r;
@@ -126,7 +125,6 @@ function enter(){
   let row=document.createElement("div");
   row.className="h-row";
   row.dataset.value=r;
-
   row.innerHTML=`
     <span class="h-exp">${originalExpr} =</span>
     <span class="h-res"></span>
@@ -144,7 +142,7 @@ function enter(){
   expr=""; originalExpr=""; updateLive(); return true;
 }
 
-/* ===== DELETE ===== */
+/* DELETE */
 function deleteRow(row){
   let v=Number(row.dataset.value);
   if(!isNaN(v)){
@@ -154,12 +152,13 @@ function deleteRow(row){
   row.remove();
 }
 
-/* ===== SWIPE ===== */
+/* SWIPE TO DELETE */
 function enableSwipeToDelete(row){
   let sx=0, dx=0, drag=false;
 
   row.addEventListener("pointerdown",e=>{
     sx=e.clientX; drag=true;
+    row.classList.add("swiping");
     row.style.transition="none";
   });
 
@@ -171,6 +170,7 @@ function enableSwipeToDelete(row){
 
   row.addEventListener("pointerup",()=>{
     drag=false;
+    row.classList.remove("swiping");
     row.style.transition="transform .2s ease";
     if(Math.abs(dx)>row.offsetWidth*0.35){
       row.style.transform="translateX(-100%)";
@@ -183,11 +183,13 @@ function enableSwipeToDelete(row){
   });
 
   row.addEventListener("pointercancel",()=>{
-    drag=false; row.style.transform="translateX(0)";
+    drag=false;
+    row.classList.remove("swiping");
+    row.style.transform="translateX(0)";
   });
 }
 
-/* ===== BACK & CLEAR ===== */
+/* BACK & CLEAR */
 function back(){
   if(expr==="") return false;
   expr=expr.slice(0,-1); originalExpr=originalExpr.slice(0,-1);
@@ -196,6 +198,6 @@ function back(){
 function clearAll(){
   if(expr===""&&historyEl.innerHTML==="") return false;
   expr=""; originalExpr=""; grandTotal=0;
-  historyEl.innerHTML=""; updateLive();
-  totalEl.innerText="0.00"; return true;
+  historyEl.innerHTML="";
+  updateLive(); totalEl.innerText="0.00"; return true;
 }
