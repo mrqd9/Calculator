@@ -73,3 +73,34 @@ function clearAll(){
   historyEl.innerHTML=""; updateLive();
   totalEl.innerText="0.00"; return true;
 }
+let cutTimer = null;
+let cutLongPress = false;
+
+function cutPressStart(){
+  cutLongPress = false;
+
+  cutTimer = setTimeout(() => {
+    // LONG PRESS → clear live input
+    if(expr !== ""){
+      expr = "";
+      originalExpr = "";
+      updateLive();
+      if (navigator.vibrate) navigator.vibrate(25);
+    }
+    cutLongPress = true;
+  }, 600); // 👈 long press threshold
+}
+
+function cutPressEnd(){
+  clearTimeout(cutTimer);
+
+  // SHORT PRESS → normal backspace
+  if(!cutLongPress){
+    back(); // existing back() function
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+}
+
+function cutPressCancel(){
+  clearTimeout(cutTimer);
+}
