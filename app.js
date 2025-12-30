@@ -37,7 +37,7 @@ function formatIN(str){
   let out = (rest ? rest + "," : "") + last3;
 
   if(d !== undefined){
-    return out + "." + d; // keeps 0.
+    return out + "." + d;
   }
   return out;
 }
@@ -216,7 +216,7 @@ function cutPressCancel(){
   clearTimeout(cutTimer);
 }
 
-/* ================= SWIPE TO DELETE ================= */
+/* ================= SWIPE TO DELETE (ENHANCED) ================= */
 function enableSwipe(row){
   let startX = 0;
   let dx = 0;
@@ -225,6 +225,7 @@ function enableSwipe(row){
   row.addEventListener("pointerdown", e=>{
     startX = e.clientX;
     dragging = true;
+    row.classList.add("swiping");
     row.style.transition = "none";
   });
 
@@ -249,10 +250,11 @@ function enableSwipe(row){
         else totalEl.classList.remove("negative");
       }
       row.style.transform = "translateX(-100%)";
-      setTimeout(()=>row.remove(),200);
       if(navigator.vibrate) navigator.vibrate(20);
+      setTimeout(()=>row.remove(),200);
     }else{
       row.style.transform = "translateX(0)";
+      row.classList.remove("swiping");
     }
     dx = 0;
   });
@@ -260,6 +262,7 @@ function enableSwipe(row){
   row.addEventListener("pointercancel", ()=>{
     dragging = false;
     row.style.transform = "translateX(0)";
+    row.classList.remove("swiping");
   });
 }
 
