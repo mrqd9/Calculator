@@ -4,15 +4,13 @@ let totalEl=document.getElementById("total");
 
 let expr="", originalExpr="", grandTotal=0;
 
-/* HAPTIC */
 function tap(fn){
   let changed=fn();
   if(changed && navigator.vibrate) navigator.vibrate(15);
 }
 
-/* FORMAT */
 function formatIN(n){
-  if(n===""||n==="-" ) return n;
+  if(n===""||n==="-") return n;
   let x=Number(n);
   if(isNaN(x)) return n;
   return x.toLocaleString("en-IN",{maximumFractionDigits:10});
@@ -24,11 +22,10 @@ function updateLive(){
 }
 function currentNumber(){return expr.split(" ").pop();}
 
-/* ACTIONS */
 function digit(d){
   let c=currentNumber();
   if(d==="."&&c.includes(".")) return false;
-  if(d!=="."&&c.replace("-","").replace(".","").length>=12) return false;
+  if(d!=="."&&c.replace("-","" ).replace(".","").length>=12) return false;
   expr+=d; originalExpr+=d; updateLive(); return true;
 }
 
@@ -54,17 +51,13 @@ function evaluate(e){
 function enter(){
   if(expr===""||expr==="-"||expr==="−") return false;
   let r; try{r=evaluate(expr);}catch{return false;}
-
   let row=document.createElement("div");
   row.className="h-row"+(r<0?" negative":"");
-  row.innerHTML=`<span class="h-exp">${originalExpr} =</span>
-                 <span class="h-res">${formatIN(r)}</span>`;
+  row.innerHTML=`<span class="h-exp">${originalExpr} =</span><span class="h-res">${formatIN(r)}</span>`;
   historyEl.appendChild(row);
   historyEl.scrollTop=historyEl.scrollHeight;
-
   grandTotal=clean(grandTotal+r);
   totalEl.innerText=formatIN(grandTotal.toFixed(2));
-
   expr=""; originalExpr=""; updateLive(); return true;
 }
 
