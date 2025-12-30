@@ -5,35 +5,38 @@ let totalEl = document.getElementById("total");
 let tokens = [];
 let grandTotal = 0;
 
-/* ========= TAP WRAPPER ========= */
+/* TAP */
 function tap(fn){
   let ok = fn();
   if(ok && navigator.vibrate) navigator.vibrate(15);
 }
 
-/* ========= HELPERS ========= */
+/* HELPERS */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
 }
-
 function scrollHistoryToBottom(){
-  requestAnimationFrame(()=>{
-    historyEl.scrollTop = historyEl.scrollHeight;
-  });
+  requestAnimationFrame(()=>historyEl.scrollTop = historyEl.scrollHeight);
 }
 
-/* ========= FORMAT ========= */
+/* FORMAT */
 function formatIN(str){
   if(str===""||str==="-") return str;
-  let [i,d]=str.split(".");
-  i=i.replace(/\D/g,"");
+  let parts = str.split(".");
+  let i = parts[0].replace(/\D/g,"");
+  let d = parts[1];
+
   let last3=i.slice(-3), rest=i.slice(0,-3);
   if(rest) rest=rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
   let out=(rest?rest+",":"")+last3;
-  return d?out+"."+d:out;
+
+  if(d !== undefined){
+    return out + "." + d;   // 🔥 keeps 0.
+  }
+  return out;
 }
 
-/* ========= LIVE ========= */
+/* LIVE */
 function updateLive(){
   let text = tokens.map(t=>/^\d|\-/.test(t)?formatIN(t):t).join(" ");
   liveEl.innerHTML = text
@@ -41,7 +44,7 @@ function updateLive(){
     : `<span class="caret"></span>`;
 }
 
-/* ========= DIGIT ========= */
+/* DIGIT */
 function digit(d){
   let last = tokens[tokens.length-1];
 
@@ -70,10 +73,10 @@ function digit(d){
   return true;
 }
 
-/* ========= OPERATOR ========= */
+/* OPERATOR */
 function setOp(op){
   if(tokens.length===0){
-    if(op==="-"){ tokens.push("-"); updateLive(); return true; }
+    if(op==="-"){tokens.push("-");updateLive();return true;}
     return false;
   }
   let last=tokens[tokens.length-1];
@@ -86,12 +89,7 @@ function setOp(op){
   return true;
 }
 
-/* ========= PERCENT (TEMP SAFE) ========= */
-function applyPercent(){
-  return false; // disable for now (no crash)
-}
-
-/* ========= EVALUATE ========= */
+/* EVALUATE */
 function evaluate(){
   let exp=tokens.join(" ")
     .replace(/×/g,"*")
@@ -99,12 +97,11 @@ function evaluate(){
   return clean(Function("return "+exp)());
 }
 
-/* ========= ENTER ========= */
+/* ENTER */
 function enter(){
   if(tokens.length===0) return false;
-
   let r;
-  try{ r=evaluate(); }catch{ return false; }
+  try{r=evaluate();}catch{return false;}
 
   let row=document.createElement("div");
   row.className="h-row";
@@ -126,17 +123,21 @@ function enter(){
   return true;
 }
 
-/* ========= BACK ========= */
+/* BACKSPACE */
 function back(){
-  if(tokens.length===0) return false;
-  let last=tokens[tokens.length-1];
-  if(last.length>1) tokens[tokens.length-1]=last.slice(0,-1);
-  else tokens.pop();
+  if(tokens.length === 0) return false;
+
+  let last = tokens[tokens.length - 1];
+  if(last.length > 1){
+    tokens[tokens.length - 1] = last.slice(0, -1);
+  }else{
+    tokens.pop();
+  }
   updateLive();
   return true;
 }
 
-/* ========= CLEAR ========= */
+/* CLEAR */
 function clearAll(){
   tokens=[];
   grandTotal=0;
