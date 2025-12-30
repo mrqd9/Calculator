@@ -56,19 +56,19 @@ html,body{
   overflow:hidden;
 }
 
-/* RED DELETE BACKGROUND – HIDDEN BY DEFAULT */
+/* RED DELETE (HIDDEN BY DEFAULT) */
 .h-row::before{
-  content:"Delete";
+  content:"← Delete";
   position:absolute;
   inset:0;
   background:#d32f2f;
   color:#fff;
-  font-size:14px;
+  font-size:15px;
   font-weight:600;
   display:flex;
   align-items:center;
   justify-content:flex-end;
-  padding-right:16px;
+  padding-right:18px;
   opacity:0;
   transition:opacity .15s ease;
   z-index:0;
@@ -79,10 +79,17 @@ html,body{
   opacity:1;
 }
 
-/* CAPSULE CONTENT ABOVE RED */
+/* FADE CONTENT WHILE SWIPING */
+.h-row.swiping .h-exp,
+.h-row.swiping .h-res{
+  opacity:0;
+}
+
+/* CONTENT ABOVE RED */
 .h-row > *{
   position:relative;
   z-index:1;
+  transition:opacity .12s ease;
 }
 
 /* TEXT */
@@ -107,13 +114,17 @@ html,body{
   margin:6px 0;
 }
 
-/* LIVE / TOTAL */
+/* LIVE & TOTAL (FIXED HEIGHT – NO JUMP) */
 .live{
+  height:32px;
+  min-height:32px;
   text-align:center;
   font-size:24px;
   font-weight:500;
 }
 .total{
+  height:42px;
+  min-height:42px;
   text-align:right;
   font-size:34px;
   font-weight:700;
@@ -141,6 +152,16 @@ button{
 }
 button:active{
   transform:translateY(1px) scale(.97);
+}
+
+/* BUTTON TYPES */
+.num{background:linear-gradient(180deg,#606060,#484848)}
+.op{background:linear-gradient(180deg,#6b6b6b,#525252)}
+.ac{background:linear-gradient(180deg,#d05aa8,#b6468e)}
+.eq{
+  grid-column:span 2;
+  font-size:28px;
+  background:linear-gradient(180deg,#7a7a7a,#5f5f5f);
 }
 
 /* LANDSCAPE BLOCK */
