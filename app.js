@@ -5,148 +5,229 @@ let totalEl = document.getElementById("total");
 let tokens = [];
 let grandTotal = 0;
 
-/* TAP */
+/* ================= TAP WRAPPER ================= */
 function tap(fn){
   let ok = fn();
   if(ok && navigator.vibrate) navigator.vibrate(15);
 }
 
-/* HELPERS */
+/* ================= HELPERS ================= */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
 }
+
 function scrollHistoryToBottom(){
-  requestAnimationFrame(()=>historyEl.scrollTop = historyEl.scrollHeight);
+  requestAnimationFrame(()=>{
+    historyEl.scrollTop = historyEl.scrollHeight;
+  });
 }
 
-/* FORMAT */
+/* ================= FORMAT ================= */
 function formatIN(str){
-  if(str===""||str==="-") return str;
+  if(str==="" || str==="-") return str;
+
   let parts = str.split(".");
   let i = parts[0].replace(/\D/g,"");
   let d = parts[1];
 
-  let last3=i.slice(-3), rest=i.slice(0,-3);
-  if(rest) rest=rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
-  let out=(rest?rest+",":"")+last3;
+  let last3 = i.slice(-3);
+  let rest  = i.slice(0,-3);
+  if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
+  let out = (rest ? rest + "," : "") + last3;
+
+  // IMPORTANT: keep trailing dot (0.)
   if(d !== undefined){
-    return out + "." + d;   // 🔥 keeps 0.
+    return out + "." + d;
   }
   return out;
 }
 
-/* LIVE */
+/* ================= LIVE (with caret) ================= */
 function updateLive(){
-  let text = tokens.map(t=>/^\d|\-/.test(t)?formatIN(t):t).join(" ");
+  let text = tokens
+    .map(t => (/^\d|\-/.test(t) ? formatIN(t) : t))
+    .join(" ");
+
   liveEl.innerHTML = text
     ? `${text}<span class="caret"></span>`
     : `<span class="caret"></span>`;
 }
 
-/* DIGIT */
+/* ================= DIGIT INPUT ================= */
 function digit(d){
-  let last = tokens[tokens.length-1];
+  let last = tokens[tokens.length - 1];
 
-  if(tokens.length===0){
-    tokens.push(d==="." ? "0." : d);
-    updateLive(); return true;
+  // First input
+  if(tokens.length === 0){
+    tokens.push(d === "." ? "0." : d);
+    updateLive();
+    return true;
   }
 
-  if(last==="-" && tokens.length===1){
-    tokens[0] = d==="." ? "-0." : "-"+d;
-    updateLive(); return true;
+  // Starting negative number
+  if(last === "-" && tokens.length === 1){
+    tokens[0] = (d === ".") ? "-0." : "-" + d;
+    updateLive();
+    return true;
   }
 
+  // After operator
   if(["+","-","×","÷"].includes(last)){
-    tokens.push(d==="." ? "0." : d);
-    updateLive(); return true;
+    tokens.push(d === "." ? "0." : d);
+    updateLive();
+    return true;
   }
 
-  if(d==="." && last.includes(".")) return false;
+  // Prevent double dot
+  if(d === "." && last.includes(".")) return false;
 
+  // Length limit (ignore - and .)
   let pure = last.replace("-","").replace(".","");
-  if(d!=="." && pure.length>=12) return false;
+  if(d !== "." && pure.length >= 12) return false;
 
-  tokens[tokens.length-1]+=d;
+  tokens[tokens.length - 1] += d;
   updateLive();
   return true;
 }
 
-/* OPERATOR */
+/* ================= OPERATOR ================= */
 function setOp(op){
-  if(tokens.length===0){
-    if(op==="-"){tokens.push("-");updateLive();return true;}
+  if(tokens.length === 0){
+    if(op === "-"){
+      tokens.push("-");
+      updateLive();
+      return true;
+    }
     return false;
   }
-  let last=tokens[tokens.length-1];
+
+  let last = tokens[tokens.length - 1];
+
   if(["+","-","×","÷"].includes(last)){
-    tokens[tokens.length-1]=op;
+    tokens[tokens.length - 1] = op; // replace
   }else{
     tokens.push(op);
   }
+
   updateLive();
   return true;
 }
 
-/* EVALUATE */
+/* ================= EVALUATE ================= */
 function evaluate(){
-  let exp=tokens.join(" ")
+  let exp = tokens.join(" ")
     .replace(/×/g,"*")
     .replace(/÷/g,"/");
-  return clean(Function("return "+exp)());
+  return clean(Function("return " + exp)());
 }
 
-/* ENTER */
+/* ================= ENTER ================= */
 function enter(){
-  if(tokens.length===0) return false;
-  let r;
-  try{r=evaluate();}catch{return false;}
+  if(tokens.length === 0) return false;
 
-  let row=document.createElement("div");
-  row.className="h-row";
-  row.innerHTML=`
+  let result;
+  try{
+    result = evaluate();
+  }catch{
+    return false;
+  }
+
+  let row = document.createElement("div");
+  row.className = "h-row";
+  row.dataset.value = result;
+
+  row.innerHTML = `
     <span class="h-exp">${tokens.join(" ")} =</span>
-    <span class="h-res">${formatIN(r.toString())}</span>
+    <span class="h-res">${formatIN(result.toString())}</span>
   `;
-  if(r<0) row.querySelector(".h-res").classList.add("negative");
+
+  if(result < 0){
+    row.querySelector(".h-res").classList.add("negative");
+  }
+
   historyEl.appendChild(row);
 
-  grandTotal=clean(grandTotal+r);
-  totalEl.innerText=formatIN(grandTotal.toString());
-  if(grandTotal<0) totalEl.classList.add("negative");
+  grandTotal = clean(grandTotal + result);
+  totalEl.innerText = formatIN(grandTotal.toString());
+  if(grandTotal < 0) totalEl.classList.add("negative");
   else totalEl.classList.remove("negative");
 
-  tokens=[];
+  tokens = [];
   updateLive();
   scrollHistoryToBottom();
   return true;
 }
 
-/* BACKSPACE */
+/* ================= BACKSPACE (token-safe) ================= */
 function back(){
   if(tokens.length === 0) return false;
 
   let last = tokens[tokens.length - 1];
+
+  // Operator delete
+  if(["+","-","×","÷"].includes(last)){
+    tokens.pop();
+    updateLive();
+    return true;
+  }
+
+  // Number delete
   if(last.length > 1){
     tokens[tokens.length - 1] = last.slice(0, -1);
   }else{
     tokens.pop();
   }
+
   updateLive();
   return true;
 }
 
-/* CLEAR */
+/* ================= CLEAR ALL ================= */
 function clearAll(){
-  tokens=[];
-  grandTotal=0;
-  historyEl.innerHTML="";
-  totalEl.innerText="0";
+  if(tokens.length === 0 && historyEl.innerHTML === "") return false;
+
+  tokens = [];
+  grandTotal = 0;
+  historyEl.innerHTML = "";
+  totalEl.innerText = "0";
   totalEl.classList.remove("negative");
   updateLive();
+  scrollHistoryToBottom();
   return true;
 }
 
-/* INIT */
-updateLive();
+/* ================= LONG PRESS BACKSPACE ================= */
+let cutTimer = null;
+let cutLongPress = false;
+
+function cutPressStart(e){
+  e.preventDefault();
+  cutLongPress = false;
+
+  cutTimer = setTimeout(()=>{
+    if(tokens.length > 0){
+      tokens = [];
+      updateLive();
+      if(navigator.vibrate) navigator.vibrate(25);
+    }
+    cutLongPress = true;
+  }, 450);
+}
+
+function cutPressEnd(e){
+  e.preventDefault();
+  clearTimeout(cutTimer);
+
+  if(!cutLongPress){
+    let ok = back();
+    if(ok && navigator.vibrate) navigator.vibrate(15);
+  }
+}
+
+function cutPressCancel(){
+  clearTimeout(cutTimer);
+}
+
+/* ================= INIT ================= */
+updateLive(); 
