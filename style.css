@@ -122,11 +122,11 @@ html,body{
 
 /* LIVE & TOTAL (FIXED HEIGHT) */
 .live{
-  height:32px;
-  min-height:32px;
+  height:28px;
+  min-height:28px;
   text-align:center;
-  font-size:24px;
-  font-weight:500;
+  font-size:22px;
+  font-weight:400;
 }
 .total{
   height:42px;
