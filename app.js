@@ -5,7 +5,7 @@ let totalEl = document.getElementById("total");
 let tokens = [];
 let grandTotal = 0;
 
-/* ================= TAP WRAPPER ================= */
+/* ================= TAP ================= */
 function tap(fn){
   let ok = fn();
   if(ok && navigator.vibrate) navigator.vibrate(15);
@@ -36,14 +36,13 @@ function formatIN(str){
 
   let out = (rest ? rest + "," : "") + last3;
 
-  // IMPORTANT: keep trailing dot (0.)
   if(d !== undefined){
-    return out + "." + d;
+    return out + "." + d; // keeps 0.
   }
   return out;
 }
 
-/* ================= LIVE (with caret) ================= */
+/* ================= LIVE ================= */
 function updateLive(){
   let text = tokens
     .map(t => (/^\d|\-/.test(t) ? formatIN(t) : t))
@@ -54,35 +53,30 @@ function updateLive(){
     : `<span class="caret"></span>`;
 }
 
-/* ================= DIGIT INPUT ================= */
+/* ================= DIGIT ================= */
 function digit(d){
   let last = tokens[tokens.length - 1];
 
-  // First input
   if(tokens.length === 0){
     tokens.push(d === "." ? "0." : d);
     updateLive();
     return true;
   }
 
-  // Starting negative number
   if(last === "-" && tokens.length === 1){
     tokens[0] = (d === ".") ? "-0." : "-" + d;
     updateLive();
     return true;
   }
 
-  // After operator
   if(["+","-","×","÷"].includes(last)){
     tokens.push(d === "." ? "0." : d);
     updateLive();
     return true;
   }
 
-  // Prevent double dot
   if(d === "." && last.includes(".")) return false;
 
-  // Length limit (ignore - and .)
   let pure = last.replace("-","").replace(".","");
   if(d !== "." && pure.length >= 12) return false;
 
@@ -103,9 +97,8 @@ function setOp(op){
   }
 
   let last = tokens[tokens.length - 1];
-
   if(["+","-","×","÷"].includes(last)){
-    tokens[tokens.length - 1] = op; // replace
+    tokens[tokens.length - 1] = op;
   }else{
     tokens.push(op);
   }
@@ -146,6 +139,7 @@ function enter(){
     row.querySelector(".h-res").classList.add("negative");
   }
 
+  enableSwipe(row);
   historyEl.appendChild(row);
 
   grandTotal = clean(grandTotal + result);
@@ -159,22 +153,16 @@ function enter(){
   return true;
 }
 
-/* ================= BACKSPACE (token-safe) ================= */
+/* ================= BACKSPACE ================= */
 function back(){
   if(tokens.length === 0) return false;
 
   let last = tokens[tokens.length - 1];
 
-  // Operator delete
   if(["+","-","×","÷"].includes(last)){
     tokens.pop();
-    updateLive();
-    return true;
-  }
-
-  // Number delete
-  if(last.length > 1){
-    tokens[tokens.length - 1] = last.slice(0, -1);
+  }else if(last.length > 1){
+    tokens[tokens.length - 1] = last.slice(0,-1);
   }else{
     tokens.pop();
   }
@@ -193,7 +181,6 @@ function clearAll(){
   totalEl.innerText = "0";
   totalEl.classList.remove("negative");
   updateLive();
-  scrollHistoryToBottom();
   return true;
 }
 
@@ -229,5 +216,52 @@ function cutPressCancel(){
   clearTimeout(cutTimer);
 }
 
-/* ================= INIT ================= */
-updateLive(); 
+/* ================= SWIPE TO DELETE ================= */
+function enableSwipe(row){
+  let startX = 0;
+  let dx = 0;
+  let dragging = false;
+
+  row.addEventListener("pointerdown", e=>{
+    startX = e.clientX;
+    dragging = true;
+    row.style.transition = "none";
+  });
+
+  row.addEventListener("pointermove", e=>{
+    if(!dragging) return;
+    dx = e.clientX - startX;
+    if(dx < 0){
+      row.style.transform = `translateX(${dx}px)`;
+    }
+  });
+
+  row.addEventListener("pointerup", ()=>{
+    dragging = false;
+    row.style.transition = "transform .25s ease";
+
+    if(Math.abs(dx) > row.offsetWidth * 0.35){
+      let val = Number(row.dataset.value);
+      if(!isNaN(val)){
+        grandTotal = clean(grandTotal - val);
+        totalEl.innerText = formatIN(grandTotal.toString());
+        if(grandTotal < 0) totalEl.classList.add("negative");
+        else totalEl.classList.remove("negative");
+      }
+      row.style.transform = "translateX(-100%)";
+      setTimeout(()=>row.remove(),200);
+      if(navigator.vibrate) navigator.vibrate(20);
+    }else{
+      row.style.transform = "translateX(0)";
+    }
+    dx = 0;
+  });
+
+  row.addEventListener("pointercancel", ()=>{
+    dragging = false;
+    row.style.transform = "translateX(0)";
+  });
+}
+
+/* INIT */
+updateLive();
