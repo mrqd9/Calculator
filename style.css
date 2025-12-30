@@ -9,6 +9,7 @@ html,body{
 
 .calc{
   height:100vh;
+  height:100svh;
   padding:12px;
   box-sizing:border-box;
   background:#2a2a2a;
@@ -16,9 +17,8 @@ html,body{
   flex-direction:column;
 }
 
-/* ===== DISPLAY ===== */
 .display{
-  flex:0 0 61%;
+  flex:1;
   min-height:0;
   background:#cfd6c8;
   border-radius:8px;
@@ -27,7 +27,6 @@ html,body{
   flex-direction:column;
 }
 
-/* ===== HISTORY ===== */
 .history{
   flex:1;
   min-height:0;
@@ -37,7 +36,6 @@ html,body{
   gap:3px;
   padding:0 4px;
   font-size:18px;
-  font-variant-numeric: tabular-nums;
 }
 
 .h-row{
@@ -46,62 +44,34 @@ html,body{
   padding:6px 12px;
   border-radius:999px;
 }
-.h-row:nth-child(odd){background:rgba(90,120,100,0.10)}
-.h-row:nth-child(even){background:rgba(120,90,100,0.10)}
+.h-row:nth-child(odd){background:rgba(90,120,100,.1)}
+.h-row:nth-child(even){background:rgba(120,90,100,.1)}
 
-.h-exp{
-  text-align:right;
-  padding-right:12px;
-  opacity:.85;
-  word-break:break-word;
-}
-.h-res{
-  text-align:right;
-  font-weight:600;
-  padding-left:12px;
-  border-left:1px solid rgba(0,0,0,0.18);
-}
+.h-exp{text-align:right;padding-right:12px;opacity:.85}
+.h-res{text-align:right;font-weight:600;padding-left:12px;border-left:1px solid rgba(0,0,0,.18)}
 .h-row.negative .h-res{color:#b00020}
 
-/* ===== SEPARATORS ===== */
-.separator{
-  height:2px;
-  background:#999;
-  margin:6px 0;
-}
+.separator{height:2px;background:#999;margin:6px 0}
 
-/* ===== LIVE / TOTAL ===== */
-.live{
-  font-size:22px;
-  min-height:28px;
-  text-align:center;
-  color:#333;
-}
-.total{
-  font-size:32px;
-  font-weight:bold;
-  text-align:right;
-}
+.live{font-size:22px;min-height:28px;text-align:center;color:#333}
+.total{font-size:32px;font-weight:bold;text-align:right}
 
-/* ===== KEYS ===== */
 .keys{
-  flex:0 0 39%;
+  height:360px;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:5px;
   margin-top:8px;
-  padding-bottom:20px; /* comfort padding */
+  padding-bottom:20px;
 }
 
-/* 🔒 HARD ANDROID NAV BAR PROTECTION */
 .keys::after{
   content:"";
   display:block;
-  height:24px;          /* GUARANTEED SAFE SPACE */
-  grid-column:1 / -1;
+  height:24px;
+  grid-column:1/-1;
 }
 
-/* ===== BUTTONS ===== */
 button{
   height:56px;
   border:0;
@@ -110,34 +80,21 @@ button{
   font-weight:600;
   background:#444;
   color:#fff;
-  transition:background .12s ease,transform .05s ease;
+  transition:.12s,transform .05s;
 }
-button:active{
-  background:#777;
-  transform:scale(.97);
-}
+button:active{background:#777;transform:scale(.97)}
 .num{background:#5a5a5a}
 .op{background:#5c5c5c}
 .ac{background:#c14a9a}
-.eq{
-  grid-column:span 2;
-  background:#6a6a6a;
-  font-size:28px;
-}
+.eq{grid-column:span 2;background:#6a6a6a;font-size:28px}
 
-/* ===== LANDSCAPE BLOCK ===== */
-@media (orientation: landscape){
+@media (orientation:landscape){
   body::before{
     content:"Rotate phone to vertical mode";
-    position:fixed;
-    inset:0;
-    background:#000;
-    color:#fff;
-    font-size:22px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    position:fixed;inset:0;
+    background:#000;color:#fff;
+    display:flex;align-items:center;justify-content:center;
     z-index:9999;
   }
   .calc{display:none;}
-}
+      }
