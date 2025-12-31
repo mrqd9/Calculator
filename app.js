@@ -38,9 +38,14 @@ function recalculateGrandTotal(){
           : totalEl.classList.remove("negative");
 }
 
-/* ================= NUMBER FORMAT ================= */
+/* ================= NUMBER FORMAT (FIXED) ================= */
 function formatIN(str){
   if(str === "" || str === "-") return str;
+
+  // 🔒 SCIENTIFIC NOTATION SAFE
+  if(/[eE]/.test(str)){
+    return Number(str).toString();
+  }
 
   let parts = str.split(".");
   let i = parts[0].replace(/\D/g,"");
@@ -55,7 +60,7 @@ function formatIN(str){
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(typeof t === "object") return t.text;   // percent
+  if(typeof t === "object") return t.text;
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
@@ -205,7 +210,7 @@ function enter(){
   return true;
 }
 
-/* ================= BACKSPACE (FIXED) ================= */
+/* ================= BACKSPACE ================= */
 function back(){
   if(tokens.length === 0) return false;
 
@@ -245,7 +250,7 @@ function clearAll(){
   return true;
 }
 
-/* ================= LONG PRESS BACK ================= */
+/* ================= LONG PRESS BACKSPACE ================= */
 let cutTimer = null;
 let cutLongPress = false;
 
