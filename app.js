@@ -3,7 +3,6 @@ let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 
 let tokens = [];
-let grandTotal = 0;
 
 /* % chaining helpers */
 let percentNotes = [];
@@ -24,6 +23,21 @@ function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{
     historyEl.scrollTop = historyEl.scrollHeight;
   });
+}
+
+/* ================= GRAND TOTAL (SAFE) ================= */
+function recalculateGrandTotal(){
+  let sum = 0;
+  document.querySelectorAll(".h-row").forEach(row=>{
+    let v = Number(row.dataset.value);
+    if(!isNaN(v)) sum += v;
+  });
+
+  sum = clean(sum);
+  totalEl.innerText = formatIN(sum.toString());
+
+  if(sum < 0) totalEl.classList.add("negative");
+  else totalEl.classList.remove("negative");
 }
 
 /* ================= NUMBER FORMAT ================= */
@@ -107,7 +121,7 @@ function setOp(op){
 
   let last = tokens[tokens.length - 1];
 
-  // starting unary minus should NOT be replaced
+  // protect unary minus
   if(last === "-" && tokens.length === 1) return false;
 
   if(["+","-","×","÷"].includes(last)){
@@ -120,7 +134,7 @@ function setOp(op){
   return true;
 }
 
-/* ================= PERCENT (WITH CHAINING) ================= */
+/* ================= PERCENT (CHAINING) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -196,15 +210,12 @@ function enter(){
   enableSwipe(row);
   historyEl.appendChild(row);
 
-  grandTotal = clean(grandTotal + result);
-  totalEl.innerText = formatIN(grandTotal.toString());
-  if(grandTotal < 0) totalEl.classList.add("negative");
-  else totalEl.classList.remove("negative");
-
   tokens = [];
   percentNotes = [];
   percentBase = null;
   updateLive();
+
+  recalculateGrandTotal();
   scrollHistoryToBottom();
   return true;
 }
@@ -234,11 +245,9 @@ function clearAll(){
   tokens = [];
   percentNotes = [];
   percentBase = null;
-  grandTotal = 0;
   historyEl.innerHTML = "";
-  totalEl.innerText = "0";
-  totalEl.classList.remove("negative");
   updateLive();
+  recalculateGrandTotal();
   return true;
 }
 
@@ -276,7 +285,7 @@ function cutPressCancel(){
   clearTimeout(cutTimer);
 }
 
-/* ================= SWIPE TO DELETE (STABLE RED BG) ================= */
+/* ================= SWIPE TO DELETE ================= */
 function enableSwipe(row){
   let startX = 0;
   let dx = 0;
@@ -304,16 +313,12 @@ function enableSwipe(row){
     row.style.willChange = "auto";
 
     if(Math.abs(dx) > row.offsetWidth * 0.35){
-      let val = Number(row.dataset.value);
-      if(!isNaN(val)){
-        grandTotal = clean(grandTotal - val);
-        totalEl.innerText = formatIN(grandTotal.toString());
-        if(grandTotal < 0) totalEl.classList.add("negative");
-        else totalEl.classList.remove("negative");
-      }
       row.style.transform = "translateX(-100%)";
       if(navigator.vibrate) navigator.vibrate(20);
-      setTimeout(()=>row.remove(),200);
+      setTimeout(()=>{
+        row.remove();
+        recalculateGrandTotal();
+      },200);
     }else{
       row.style.transform = "translateX(0)";
       row.classList.remove("swiping");
@@ -331,3 +336,4 @@ function enableSwipe(row){
 
 /* INIT */
 updateLive();
+recalculateGrandTotal();
