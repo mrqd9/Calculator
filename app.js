@@ -1,108 +1,106 @@
-let historyEl = document.getElementById("history");
-let liveEl = document.getElementById("live");
-let totalEl = document.getElementById("total");
+/* ================= DOM ================= */
+const historyEl = document.getElementById("history");
+const liveEl    = document.getElementById("live");
+const totalEl   = document.getElementById("total");
 
+/* ================= MATH ENGINE ================= */
+const M = math.create(math.all, {
+  number: 'BigNumber',
+  precision: 64
+});
+
+/* ================= STATE ================= */
 let tokens = [];
-
-/* % chaining */
 let percentBase = null;
 
-/* ================= TAP ================= */
-function tap(fn){
-  let ok = fn();
-  if(ok && navigator.vibrate) navigator.vibrate(15);
-}
+const OPS = ["+","-","×","÷"];
+
+/* ================= HAPTIC ================= */
+const vibrate = ms => navigator.vibrate && navigator.vibrate(ms);
 
 /* ================= HELPERS ================= */
-function clean(n){
-  return Number(n);
-}
-
 function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{
     historyEl.scrollTop = historyEl.scrollHeight;
   });
 }
 
-/* ================= NUMBER FORMAT ================= */
+/* ================= FORMAT ================= */
 function formatIN(str){
-  if(str==="" || str==="-") return str;
+  if(str === "" || str === "-") return str;
 
-  let parts = str.split(".");
-  let i = parts[0].replace(/\D/g,"");
-  let d = parts[1];
+  let [i,d] = str.split(".");
+  i = i.replace(/\D/g,"");
 
   let last3 = i.slice(-3);
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
+  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
 }
 
-/* ================= DISPLAY FORMATTERS ================= */
 function displayResult(n){
   if(!isFinite(n)) return "Error";
-  const str = n.toString();
-  if(str.includes("e")) return n.toExponential(2);
-  return formatIN(str);
+  const s = n.toString();
+  return s.includes("e") ? Number(n).toExponential(2) : formatIN(s);
 }
 
 function displayTotal(n){
   if(!isFinite(n)) return "Error";
-  let str = n.toString();
-  if(str.includes("e")){
-    str = n.toFixed(12).replace(/\.?0+$/,"");
+  let s = n.toString();
+  if(s.includes("e")){
+    s = Number(n).toFixed(12).replace(/\.?0+$/,"");
   }
-  return formatIN(str);
+  return formatIN(s);
 }
 
-/* ================= GRAND TOTAL ================= */
-function recalculateGrandTotal(){
-  let sum = 0;
-  document.querySelectorAll(".h-row").forEach(row=>{
-    let v = Number(row.dataset.value);
-    if(!isNaN(v)) sum += v;
-  });
-
-  sum = clean(sum);
-  totalEl.innerText = displayTotal(sum);
-  sum < 0 ? totalEl.classList.add("negative")
-          : totalEl.classList.remove("negative");
-}
-
-/* ================= TOKEN DISPLAY ================= */
-function formatTokenForDisplay(t){
+/* ================= LIVE DISPLAY ================= */
+function formatToken(t){
   if(typeof t === "object") return t.text;
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
 }
 
-/* ================= LIVE ================= */
 function updateLive(){
-  let text = tokens.map(formatTokenForDisplay).join(" ");
+  const text = tokens.map(formatToken).join(" ");
   liveEl.innerHTML = text
     ? `${text}<span class="caret"></span>`
     : `<span class="caret"></span>`;
 }
 
-/* ================= DIGIT ================= */
+/* ================= GRAND TOTAL ================= */
+function recalcTotal(){
+  let sum = M.bignumber(0);
+
+  document.querySelectorAll(".h-row").forEach(r=>{
+    const v = r.dataset.value;
+    if(v !== undefined){
+      sum = sum.plus(M.bignumber(v));
+    }
+  });
+
+  totalEl.innerText = displayTotal(sum.toString());
+  totalEl.classList.toggle("negative", sum.isNegative());
+}
+
+/* ================= INPUT ================= */
 function digit(d){
-  percentBase = null; // 🔥 RESET percent on manual typing
+  percentBase = null;
 
-  let last = tokens[tokens.length - 1];
+  const last = tokens.at(-1);
 
-  if(tokens.length === 0){
+  if(!tokens.length){
     tokens.push(d === "." ? "0." : d);
     updateLive(); return true;
   }
 
   if(last === "-" && tokens.length === 1){
-    tokens[0] = (d === ".") ? "-0." : "-" + d;
+    tokens[0] = d === "." ? "-0." : "-" + d;
     updateLive(); return true;
   }
 
-  if(["+","-","×","÷"].includes(last)){
+  if(OPS.includes(last)){
     tokens.push(d === "." ? "0." : d);
     updateLive(); return true;
   }
@@ -110,63 +108,67 @@ function digit(d){
   if(typeof last === "object") return false;
   if(d === "." && last.includes(".")) return false;
 
-  let pure = last.replace("-","").replace(".","");
+  const pure = last.replace("-","").replace(".","");
   if(d !== "." && pure.length >= 12) return false;
 
   tokens[tokens.length - 1] += d;
   updateLive(); return true;
 }
 
-/* ================= OPERATOR ================= */
 function setOp(op){
-  percentBase = null; // 🔥 RESET percent when operator changes
+  percentBase = null;
 
-  if(tokens.length === 0){
-    if(op === "-"){ tokens.push("-"); updateLive(); return true; }
+  if(!tokens.length){
+    if(op === "-"){
+      tokens.push("-");
+      updateLive(); return true;
+    }
     return false;
   }
 
-  let last = tokens[tokens.length - 1];
+  const last = tokens.at(-1);
   if(last === "-" && tokens.length === 1) return false;
 
-  if(["+","-","×","÷"].includes(last)){
-    tokens[tokens.length - 1] = op;
-  }else{
-    tokens.push(op);
-  }
+  OPS.includes(last)
+    ? tokens[tokens.length - 1] = op
+    : tokens.push(op);
 
   updateLive(); return true;
 }
 
-/* ================= PERCENT ================= */
+/* ================= PERCENT (BILLING CORRECT) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
-  let last = tokens[tokens.length - 1];
-  let op   = tokens[tokens.length - 2];
+  const last = tokens.at(-1);
+  const op   = tokens.at(-2);
   if(isNaN(last)) return false;
 
-  let B = Number(last);
-  let base =
-    percentBase ??
-    (tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
-      ? Number(tokens[tokens.length - 3])
-      : null);
+  const B = M.bignumber(last);
 
-  if(base === null) return false;
+  let base;
+  if(percentBase !== null){
+    base = percentBase;
+  }else if(tokens.length >= 3 && !isNaN(tokens.at(-3))){
+    base = M.bignumber(tokens.at(-3));
+  }else{
+    return false;
+  }
 
   let value;
   if(op === "+" || op === "-"){
-    value = base * B / 100;
-    percentBase = base + (op === "+" ? value : -value);
+    value = base.mul(B).div(100);
+    percentBase = op === "+"
+      ? base.plus(value)
+      : base.minus(value);
   }else{
-    value = B / 100;
+    value = B.div(100);
     percentBase = base;
   }
 
   tokens[tokens.length - 1] = {
-    text: B + "%",
-    value: value
+    text: B.toString() + "%",
+    value: value.toString()
   };
 
   updateLive();
@@ -175,35 +177,40 @@ function applyPercent(){
 
 /* ================= EVALUATE ================= */
 function evaluate(){
-  let exp = tokens.map(t=>{
+  const expr = tokens.map(t=>{
     if(typeof t === "object") return t.value;
+    if(t === "×") return "*";
+    if(t === "÷") return "/";
     return t;
-  }).join(" ")
-    .replace(/×/g,"*")
-    .replace(/÷/g,"/");
+  }).join(" ");
 
-  return Function("return " + exp)();
+  const res = M.evaluate(expr);
+  return res.toString();
 }
 
 /* ================= ENTER ================= */
 function enter(){
-  if(tokens.length === 0) return false;
+  if(!tokens.length) return false;
 
   let result;
-  try{ result = evaluate(); }catch{ return false; }
+  try{
+    result = evaluate();
+  }catch{
+    return false;
+  }
 
-  let row = document.createElement("div");
+  const row = document.createElement("div");
   row.className = "h-row";
   row.dataset.value = result;
 
   row.innerHTML = `
-    <span class="h-exp">
-      ${tokens.map(formatTokenForDisplay).join(" ")} =
-    </span>
+    <span class="h-exp">${tokens.map(formatToken).join(" ")} =</span>
     <span class="h-res">${displayResult(result)}</span>
   `;
 
-  if(result < 0) row.querySelector(".h-res").classList.add("negative");
+  if(M.bignumber(result).isNegative()){
+    row.querySelector(".h-res").classList.add("negative");
+  }
 
   enableSwipe(row);
   historyEl.appendChild(row);
@@ -212,26 +219,20 @@ function enter(){
   percentBase = null;
   updateLive();
 
-  recalculateGrandTotal();
+  recalcTotal();
   scrollHistoryToBottom();
   return true;
 }
 
 /* ================= BACKSPACE ================= */
 function back(){
-  if(tokens.length === 0) return false;
+  if(!tokens.length) return false;
 
-  percentBase = null; // 🔥 RESET percent on backspace
+  percentBase = null;
 
-  let last = tokens[tokens.length - 1];
+  const last = tokens.at(-1);
 
-  if(typeof last === "object"){
-    tokens.pop();
-    updateLive();
-    return true;
-  }
-
-  if(["+","-","×","÷"].includes(last)){
+  if(typeof last === "object" || OPS.includes(last)){
     tokens.pop();
   }else if(last.length > 1){
     tokens[tokens.length - 1] = last.slice(0,-1);
@@ -243,78 +244,74 @@ function back(){
   return true;
 }
 
-/* ================= CLEAR ALL ================= */
+/* ================= CLEAR ================= */
 function clearAll(){
-  if(tokens.length === 0 && historyEl.innerHTML === "") return false;
+  if(!tokens.length && !historyEl.children.length) return false;
 
   tokens = [];
   percentBase = null;
   historyEl.innerHTML = "";
   updateLive();
-  recalculateGrandTotal();
+  recalcTotal();
   return true;
 }
 
-/* ================= LONG PRESS BACKSPACE ================= */
+/* ================= LONG PRESS BACK ================= */
 let cutTimer = null;
-let cutLongPress = false;
+let cutLong = false;
 
 function cutPressStart(e){
   e.preventDefault();
-  cutLongPress = false;
+  cutLong = false;
 
   cutTimer = setTimeout(()=>{
-    if(tokens.length > 0){
+    if(tokens.length){
       tokens = [];
       percentBase = null;
       updateLive();
-      if(navigator.vibrate) navigator.vibrate(25);
+      vibrate(25);
     }
-    cutLongPress = true;
-  }, 450);
+    cutLong = true;
+  },450);
 }
 
 function cutPressEnd(e){
   e.preventDefault();
   clearTimeout(cutTimer);
-
-  if(!cutLongPress){
-    let ok = back();
-    if(ok && navigator.vibrate) navigator.vibrate(15);
-  }
+  if(!cutLong && back()) vibrate(15);
 }
 
 function cutPressCancel(){
   clearTimeout(cutTimer);
 }
 
-/* ================= SWIPE TO DELETE ================= */
+/* ================= SWIPE DELETE ================= */
 function enableSwipe(row){
-  let startX = 0, dx = 0, dragging = false;
+  let sx=0, dx=0, drag=false;
 
   row.addEventListener("pointerdown", e=>{
-    startX = e.clientX;
-    dragging = true;
+    sx = e.clientX;
+    drag = true;
     row.classList.add("swiping");
     row.style.transition = "none";
   });
 
   row.addEventListener("pointermove", e=>{
-    if(!dragging) return;
-    dx = e.clientX - startX;
+    if(!drag) return;
+    dx = e.clientX - sx;
     if(dx < 0) row.style.transform = `translateX(${dx}px)`;
   });
 
   row.addEventListener("pointerup", ()=>{
-    dragging = false;
+    drag = false;
     row.style.transition = "transform .25s ease";
 
     if(Math.abs(dx) > row.offsetWidth * 0.35){
       row.style.transform = "translateX(-100%)";
       setTimeout(()=>{
         row.remove();
-        recalculateGrandTotal();
-        if(navigator.vibrate) navigator.vibrate(20);
+        recalcTotal();
+        vibrate(20);
       },200);
     }else{
       row.style.transform = "translateX(0)";
@@ -324,12 +321,12 @@ function enableSwipe(row){
   });
 
   row.addEventListener("pointercancel", ()=>{
-    dragging = false;
+    drag = false;
     row.style.transform = "translateX(0)";
     row.classList.remove("swiping");
   });
 }
 
-/* INIT */
+/* ================= INIT ================= */
 updateLive();
-recalculateGrandTotal();
+recalcTotal();
