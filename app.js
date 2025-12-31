@@ -50,7 +50,7 @@ function formatIN(str){
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
+  return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
 /* ================= TOKEN DISPLAY ================= */
