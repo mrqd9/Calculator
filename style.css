@@ -57,26 +57,49 @@ html,body{
   flex-shrink:0; /* IMPORTANT: never shrink */
 }
 
-/* RED DELETE (hidden by default) */
+/* RED DELETE BACKGROUND + TEXT */
 .h-row::before{
-  content:"← Delete";
+  content:"Delete";
   position:absolute;
   inset:0;
   background:#d32f2f;
   color:#fff;
-  font-size:15px;
-  font-weight:600;
+
   display:flex;
   align-items:center;
   justify-content:flex-end;
+
   padding-right:18px;
+  font-size:15px;          /* Delete text normal */
+  font-weight:600;
+
   opacity:0;
   transition:opacity .15s ease;
+  pointer-events:none;
   z-index:0;
 }
 
-/* Show red only while swiping */
-.h-row.swiping::before{
+/* BIG LEFT ARROW (ONLY ARROW BIG) */
+.h-row::after{
+  content:"←";
+  position:absolute;
+  right:64px;              /* arrow sits before Delete */
+  top:50%;
+  transform:translateY(-50%);
+
+  font-size:34px;          /* 🔑 arrow big */
+  font-weight:700;
+  color:#fff;
+
+  opacity:0;
+  transition:opacity .15s ease;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* SHOW DELETE UI ONLY WHILE SWIPING */
+.h-row.swiping::before,
+.h-row.swiping::after{
   opacity:1;
 }
 
