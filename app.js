@@ -3,6 +3,7 @@ let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 
 let tokens = [];
+let percentBase = null;
 
 /* ================= TAP ================= */
 function tap(fn){
@@ -11,14 +12,15 @@ function tap(fn){
 }
 
 /* ================= HELPERS ================= */
-function clean(n){
-  return Number(parseFloat(n).toFixed(12));
-}
-
 function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{
     historyEl.scrollTop = historyEl.scrollHeight;
   });
+}
+
+/* ================= SAFE NUMBER ================= */
+function safeNumber(n){
+  return Number.isFinite(n) ? n : 0;
 }
 
 /* ================= GRAND TOTAL ================= */
@@ -29,29 +31,31 @@ function recalculateGrandTotal(){
     if(!isNaN(v)) sum += v;
   });
 
-  sum = clean(sum);
-  totalEl.innerText = formatIN(sum.toString());
+  totalEl.innerText = formatDisplay(sum);
   totalEl.classList.toggle("negative", sum < 0);
 }
 
 /* ================= FORMAT ================= */
-function formatIN(str){
-  if(str === "" || str === "-") return str;
+function formatDisplay(n){
+  if(!isFinite(n)) return "0";
 
-  let [i,d] = String(str).split(".");
+  // very small OR scientific → show raw
+  if(Math.abs(n) < 1e-6) return n.toString();
+
+  let [i,d] = n.toString().split(".");
   i = i.replace(/\D/g,"");
 
   let last3 = i.slice(-3);
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
+  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
 }
 
 function formatTokenForDisplay(t){
   if(typeof t === "object") return t.text;
-  if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
-  if(/^\d/.test(t)) return formatIN(t);
+  if(/^-\d/.test(t)) return "- " + formatDisplay(Number(t.slice(1)));
+  if(/^\d/.test(t)) return formatDisplay(Number(t));
   return t;
 }
 
@@ -85,9 +89,6 @@ function digit(d){
   if(typeof last === "object") return false;
   if(d === "." && last.includes(".")) return false;
 
-  let pure = last.replace("-","").replace(".","");
-  if(d !== "." && pure.length >= 12) return false;
-
   tokens[tokens.length - 1] += d;
   updateLive(); return true;
 }
@@ -109,36 +110,31 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* ================= % (TRUE BILLING COMPOUNDING) ================= */
+/* ================= PERCENT (BILLING STYLE) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
-  let percentToken = tokens.at(-1);
-  let operator = tokens.at(-2);
+  let valToken = tokens.at(-1);
+  let op = tokens.at(-2);
+  if(isNaN(valToken)) return false;
 
-  if(isNaN(percentToken)) return false;
-
-  // calculate subtotal BEFORE this %
-  let subtotal = Number(tokens[0]);
-
-  for(let i = 1; i < tokens.length - 2; i += 2){
-    let op = tokens[i];
-    let valToken = tokens[i+1];
-    let val = Number(
-      typeof valToken === "object" ? valToken.value : valToken
-    );
-
-    if(op === "+") subtotal += val;
-    if(op === "-") subtotal -= val;
-    if(op === "×") subtotal *= val;
-    if(op === "÷") subtotal /= val;
+  let base = Number(tokens[0]);
+  for(let i=1;i<tokens.length-2;i+=2){
+    let v = Number(tokens[i+1]);
+    if(tokens[i]==="+") base += v;
+    if(tokens[i]==="-") base -= v;
+    if(tokens[i]==="×") base *= v;
+    if(tokens[i]==="÷") base /= v;
   }
 
-  let percentValue = clean(subtotal * Number(percentToken) / 100);
+  let value =
+    (op==="+" || op==="-")
+      ? base * Number(valToken) / 100
+      : Number(valToken) / 100;
 
   tokens[tokens.length - 1] = {
-    text: formatIN(percentToken) + "%",
-    value: percentValue
+    text: valToken + "%",
+    value: value
   };
 
   updateLive();
@@ -151,10 +147,10 @@ function evaluate(){
     if(typeof t === "object") return t.value;
     return t;
   }).join(" ")
-    .replace(/×/g,"*")
-    .replace(/÷/g,"/");
+   .replace(/×/g,"*")
+   .replace(/÷/g,"/");
 
-  return clean(Function("return " + exp)());
+  return safeNumber(Function("return " + exp)());
 }
 
 /* ================= ENTER ================= */
@@ -171,7 +167,7 @@ function enter(){
 
   row.innerHTML = `
     <span class="h-exp">${tokens.map(formatTokenForDisplay).join(" ")} =</span>
-    <span class="h-res">${formatIN(result.toString())}</span>
+    <span class="h-res">${formatDisplay(result)}</span>
   `;
 
   if(result < 0) row.querySelector(".h-res").classList.add("negative");
@@ -191,7 +187,6 @@ function back(){
   if(!tokens.length) return false;
 
   let last = tokens.at(-1);
-
   if(typeof last === "object" || ["+","-","×","÷"].includes(last)){
     tokens.pop();
   }else if(last.length > 1){
@@ -204,10 +199,9 @@ function back(){
   return true;
 }
 
-/* ================= CLEAR ALL ================= */
+/* ================= CLEAR ================= */
 function clearAll(){
   if(!tokens.length && !historyEl.innerHTML) return false;
-
   tokens = [];
   historyEl.innerHTML = "";
   updateLive();
@@ -215,73 +209,37 @@ function clearAll(){
   return true;
 }
 
-/* ================= LONG PRESS BACK ================= */
-let cutTimer = null;
-let cutLong = false;
-
-function cutPressStart(e){
-  e.preventDefault();
-  cutLong = false;
-
-  cutTimer = setTimeout(()=>{
-    if(tokens.length){
-      tokens = [];
-      updateLive();
-      navigator.vibrate && navigator.vibrate(25);
-    }
-    cutLong = true;
-  },450);
-}
-
-function cutPressEnd(e){
-  e.preventDefault();
-  clearTimeout(cutTimer);
-  if(!cutLong && back()) navigator.vibrate && navigator.vibrate(15);
-}
-
-function cutPressCancel(){
-  clearTimeout(cutTimer);
-}
-
 /* ================= SWIPE DELETE ================= */
 function enableSwipe(row){
   let sx=0, dx=0, drag=false;
 
   row.addEventListener("pointerdown", e=>{
-    sx = e.clientX;
-    drag = true;
+    sx=e.clientX; drag=true;
     row.classList.add("swiping");
-    row.style.transition = "none";
+    row.style.transition="none";
   });
 
   row.addEventListener("pointermove", e=>{
     if(!drag) return;
-    dx = e.clientX - sx;
-    if(dx < 0) row.style.transform = `translateX(${dx}px)`;
+    dx=e.clientX-sx;
+    if(dx<0) row.style.transform=`translateX(${dx}px)`;
   });
 
   row.addEventListener("pointerup", ()=>{
-    drag = false;
-    row.style.transition = "transform .25s ease";
-
-    if(Math.abs(dx) > row.offsetWidth * 0.35){
-      row.style.transform = "translateX(-100%)";
+    drag=false;
+    row.style.transition="transform .25s ease";
+    if(Math.abs(dx)>row.offsetWidth*0.35){
+      row.style.transform="translateX(-100%)";
       setTimeout(()=>{
         row.remove();
         recalculateGrandTotal();
         navigator.vibrate && navigator.vibrate(20);
       },200);
     }else{
-      row.style.transform = "translateX(0)";
+      row.style.transform="translateX(0)";
       row.classList.remove("swiping");
     }
-    dx = 0;
-  });
-
-  row.addEventListener("pointercancel", ()=>{
-    drag = false;
-    row.style.transform = "translateX(0)";
-    row.classList.remove("swiping");
+    dx=0;
   });
 }
 
