@@ -4,7 +4,7 @@ let totalEl = document.getElementById("total");
 
 let tokens = [];
 
-/* % chaining helpers */
+/* % chaining */
 let percentBase = null;
 
 /* ================= TAP ================= */
@@ -50,9 +50,7 @@ function formatIN(str){
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  let out = (rest ? rest + "," : "") + last3;
-  if(d !== undefined) return out + "." + d;
-  return out;
+  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
 }
 
 /* ================= TOKEN DISPLAY ================= */
@@ -115,7 +113,7 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* ================= PERCENT (USER INTENT ONLY) ================= */
+/* ================= PERCENT ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -141,8 +139,7 @@ function applyPercent(){
     percentBase = base;
   }
 
-  /* replace number with calculated value,
-     but KEEP % symbol in tokens */
+  // Insert display token like "5%" before calculated value
   tokens[tokens.length - 1] = value.toString();
   tokens.splice(tokens.length - 1, 0, B + "%");
 
@@ -152,13 +149,13 @@ function applyPercent(){
 
 /* ================= EVALUATE ================= */
 function evaluate(){
-  return clean(Function(
-    "return " + tokens
-      .filter(t => !t.endsWith("%")) // ignore % tokens
-      .join(" ")
-      .replace(/×/g,"*")
-      .replace(/÷/g,"/")
-  )());
+  let exp = tokens
+    .filter(t => !t.endsWith("%"))
+    .join(" ")
+    .replace(/×/g,"*")
+    .replace(/÷/g,"/");
+
+  return clean(Function("return " + exp)());
 }
 
 /* ================= ENTER ================= */
@@ -187,6 +184,7 @@ function enter(){
   tokens = [];
   percentBase = null;
   updateLive();
+
   recalculateGrandTotal();
   scrollHistoryToBottom();
   return true;
@@ -197,18 +195,36 @@ function back(){
   if(tokens.length === 0) return false;
 
   let last = tokens[tokens.length - 1];
-  ["+","-","×","÷"].includes(last)
-    ? tokens.pop()
-    : last.length > 1
-      ? tokens[tokens.length - 1] = last.slice(0,-1)
-      : tokens.pop();
 
-  updateLive(); return true;
+  // % token
+  if(last.endsWith("%")){
+    tokens.pop();
+    updateLive();
+    return true;
+  }
+
+  // operator
+  if(["+","-","×","÷"].includes(last)){
+    tokens.pop();
+    updateLive();
+    return true;
+  }
+
+  // number
+  if(last.length > 1){
+    tokens[tokens.length - 1] = last.slice(0,-1);
+  }else{
+    tokens.pop();
+  }
+
+  updateLive();
+  return true;
 }
 
 /* ================= CLEAR ALL ================= */
 function clearAll(){
   if(tokens.length === 0 && historyEl.innerHTML === "") return false;
+
   tokens = [];
   percentBase = null;
   historyEl.innerHTML = "";
@@ -217,7 +233,40 @@ function clearAll(){
   return true;
 }
 
-/* ================= SWIPE DELETE ================= */
+/* ================= LONG PRESS BACKSPACE ================= */
+let cutTimer = null;
+let cutLongPress = false;
+
+function cutPressStart(e){
+  e.preventDefault();
+  cutLongPress = false;
+
+  cutTimer = setTimeout(()=>{
+    if(tokens.length > 0){
+      tokens = [];
+      percentBase = null;
+      updateLive();
+      if(navigator.vibrate) navigator.vibrate(25);
+    }
+    cutLongPress = true;
+  }, 450);
+}
+
+function cutPressEnd(e){
+  e.preventDefault();
+  clearTimeout(cutTimer);
+
+  if(!cutLongPress){
+    let ok = back();
+    if(ok && navigator.vibrate) navigator.vibrate(15);
+  }
+}
+
+function cutPressCancel(){
+  clearTimeout(cutTimer);
+}
+
+/* ================= SWIPE TO DELETE ================= */
 function enableSwipe(row){
   let startX = 0, dx = 0, dragging = false;
 
@@ -249,6 +298,12 @@ function enableSwipe(row){
       row.classList.remove("swiping");
     }
     dx = 0;
+  });
+
+  row.addEventListener("pointercancel", ()=>{
+    dragging = false;
+    row.style.transform = "translateX(0)";
+    row.classList.remove("swiping");
   });
 }
 
