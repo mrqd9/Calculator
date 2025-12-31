@@ -1,206 +1,331 @@
-/* ================= DOM ================= */
-const historyEl = document.getElementById("history");
-const liveEl    = document.getElementById("live");
-const totalEl   = document.getElementById("total");
+let historyEl = document.getElementById("history");
+let liveEl = document.getElementById("live");
+let totalEl = document.getElementById("total");
 
-/* ================= STATE ================= */
-let expr = "";
-let grandTotal = 0;
+let tokens = [];
 
-/* ================= UTILS ================= */
-const vibrate = ms => navigator.vibrate && navigator.vibrate(ms);
+/* % chaining */
+let percentBase = null;
 
+/* ================= TAP ================= */
+function tap(fn){
+let ok = fn();
+if(ok && navigator.vibrate) navigator.vibrate(15);
+}
+
+/* ================= HELPERS ================= */
 function clean(n){
-  return Number(parseFloat(n).toPrecision(15));
+return Number(n);
 }
 
-function scrollHistory(){
-  requestAnimationFrame(()=>{
-    historyEl.scrollTop = historyEl.scrollHeight;
-  });
+function scrollHistoryToBottom(){
+requestAnimationFrame(()=>{
+historyEl.scrollTop = historyEl.scrollHeight;
+});
 }
 
-/* ================= FORMAT ================= */
-function formatIN(n){
-  if(n === "" || n === "-") return n;
-  let str = String(n);
-  if(str.includes("e")) return str;
+/* ================= NUMBER FORMAT ================= */
+function formatIN(str){
+if(str==="" || str==="-") return str;
 
-  let [i,d] = str.split(".");
-  i = i.replace(/\B(?=(\d{3})+(?!\d))/g,",");
-  return d ? i + "." + d : i;
+let parts = str.split(".");
+let i = parts[0].replace(/\D/g,"");
+let d = parts[1];
+
+let last3 = i.slice(-3);
+let rest  = i.slice(0,-3);
+if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+
+return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
+}
+
+/* ================= DISPLAY FORMATTERS ================= */
+function displayResult(n){
+if(!isFinite(n)) return "Error";
+const str = n.toString();
+if(str.includes("e")) return n.toExponential(2);
+return formatIN(str);
+}
+
+function displayTotal(n){
+if(!isFinite(n)) return "Error";
+let str = n.toString();
+if(str.includes("e")){
+str = n.toFixed(12).replace(/.?0+$/,"");
+}
+return formatIN(str);
+}
+
+/* ================= GRAND TOTAL ================= */
+function recalculateGrandTotal(){
+let sum = 0;
+document.querySelectorAll(".h-row").forEach(row=>{
+let v = Number(row.dataset.value);
+if(!isNaN(v)) sum += v;
+});
+
+sum = clean(sum);
+totalEl.innerText = displayTotal(sum);
+sum < 0 ? totalEl.classList.add("negative")
+: totalEl.classList.remove("negative");
+}
+
+/* ================= TOKEN DISPLAY ================= */
+function formatTokenForDisplay(t){
+if(typeof t === "object") return t.text;
+if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
+if(/^\d/.test(t)) return formatIN(t);
+return t;
 }
 
 /* ================= LIVE ================= */
 function updateLive(){
-  liveEl.innerHTML = expr
-    ? `${formatIN(expr)}<span class="caret"></span>`
-    : `<span class="caret"></span>`;
+let text = tokens.map(formatTokenForDisplay).join(" ");
+liveEl.innerHTML = text
+? ${text}<span class="caret"></span>
+: <span class="caret"></span>;
 }
 
-/* ================= INPUT ================= */
+/* ================= DIGIT ================= */
 function digit(d){
-  if(d === "." && /(\.\d*)$/.test(expr)) return false;
-  expr += d;
-  updateLive();
-  vibrate(8);
-  return true;
+percentBase = null; // 🔥 RESET percent on manual typing
+
+let last = tokens[tokens.length - 1];
+
+if(tokens.length === 0){
+tokens.push(d === "." ? "0." : d);
+updateLive(); return true;
 }
 
+if(last === "-" && tokens.length === 1){
+tokens[0] = (d === ".") ? "-0." : "-" + d;
+updateLive(); return true;
+}
+
+if(["+","-","×","÷"].includes(last)){
+tokens.push(d === "." ? "0." : d);
+updateLive(); return true;
+}
+
+if(typeof last === "object") return false;
+if(d === "." && last.includes(".")) return false;
+
+let pure = last.replace("-","").replace(".","");
+if(d !== "." && pure.length >= 12) return false;
+
+tokens[tokens.length - 1] += d;
+updateLive(); return true;
+}
+
+/* ================= OPERATOR ================= */
 function setOp(op){
-  if(!expr && op !== "-") return false;
+percentBase = null; // 🔥 RESET percent when operator changes
 
-  if(/[+\-×÷]$/.test(expr)){
-    expr = expr.slice(0,-1) + op;
-  }else{
-    expr += op;
-  }
-  updateLive();
-  vibrate(8);
-  return true;
+if(tokens.length === 0){
+if(op === "-"){ tokens.push("-"); updateLive(); return true; }
+return false;
 }
 
-/* ================= ADVANCED % ================= */
+let last = tokens[tokens.length - 1];
+if(last === "-" && tokens.length === 1) return false;
+
+if(["+","-","×","÷"].includes(last)){
+tokens[tokens.length - 1] = op;
+}else{
+tokens.push(op);
+}
+
+updateLive(); return true;
+}
+
+/* ================= PERCENT ================= */
 function applyPercent(){
-  if(!expr) return false;
+if(tokens.length < 2) return false;
 
-  // last number
-  let numMatch = expr.match(/(-?\d+\.?\d*)$/);
-  if(!numMatch) return false;
+let last = tokens[tokens.length - 1];
+let op   = tokens[tokens.length - 2];
+if(isNaN(last)) return false;
 
-  let B = Number(numMatch[1]);
+let B = Number(last);
+let base =
+percentBase ??
+(tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
+? Number(tokens[tokens.length - 3])
+: null);
 
-  // left side operator + base
-  let left = expr.slice(0, numMatch.index);
-  let opMatch = left.match(/([+\-×÷])\s*(-?\d+\.?\d*)$/);
+if(base === null) return false;
 
-  let value;
-
-  if(opMatch){
-    let op = opMatch[1];
-    let A = Number(opMatch[2]);
-
-    if(op === "+" || op === "-"){
-      value = A * B / 100;
-    }else{
-      value = B / 100;
-    }
-  }else{
-    value = B / 100;
-  }
-
-  expr = left + value;
-  updateLive();
-  vibrate(10);
-  return true;
+let value;
+if(op === "+" || op === "-"){
+value = base * B / 100;
+percentBase = base + (op === "+" ? value : -value);
+}else{
+value = B / 100;
+percentBase = base;
 }
 
-/* ================= EVALUATE ================= */
-function evaluateExpression(){
-  let safe = expr
-    .replace(/×/g,"*")
-    .replace(/÷/g,"/");
+tokens[tokens.length - 1] = {
+text: B + "%",
+value: value
+};
 
-  return clean(Function("return " + safe)());
+updateLive();
+return true;
+}
+
+/* ================= EVALUATE ================= /
+function evaluate(){
+let exp = tokens.map(t=>{
+if(typeof t === "object") return t.value;
+return t;
+}).join(" ")
+.replace(/×/g,"")
+.replace(/÷/g,"/");
+
+return Function("return " + exp)();
 }
 
 /* ================= ENTER ================= */
 function enter(){
-  if(!expr) return false;
+if(tokens.length === 0) return false;
 
-  let result;
-  try{
-    result = evaluateExpression();
-  }catch{
-    return false;
-  }
+let result;
+try{ result = evaluate(); }catch{ return false; }
 
-  let row = document.createElement("div");
-  row.className = "h-row";
-  row.dataset.value = result;
+let row = document.createElement("div");
+row.className = "h-row";
+row.dataset.value = result;
 
-  row.innerHTML = `
-    <span class="h-exp">${formatIN(expr)} =</span>
-    <span class="h-res">${formatIN(result)}</span>
-  `;
+row.innerHTML =   <span class="h-exp">   ${tokens.map(formatTokenForDisplay).join(" ")} =   </span>   <span class="h-res">${displayResult(result)}</span>  ;
 
-  if(result < 0){
-    row.querySelector(".h-res").classList.add("negative");
-  }
+if(result < 0) row.querySelector(".h-res").classList.add("negative");
 
-  enableSwipe(row);
-  historyEl.appendChild(row);
+enableSwipe(row);
+historyEl.appendChild(row);
 
-  grandTotal = clean(grandTotal + result);
-  totalEl.innerText = formatIN(grandTotal);
-  totalEl.classList.toggle("negative", grandTotal < 0);
+tokens = [];
+percentBase = null;
+updateLive();
 
-  expr = "";
-  updateLive();
-  scrollHistory();
-  vibrate(20);
-  return true;
+recalculateGrandTotal();
+scrollHistoryToBottom();
+return true;
 }
 
 /* ================= BACKSPACE ================= */
 function back(){
-  if(!expr) return false;
-  expr = expr.slice(0,-1);
-  updateLive();
-  vibrate(8);
-  return true;
+if(tokens.length === 0) return false;
+
+percentBase = null; // 🔥 RESET percent on backspace
+
+let last = tokens[tokens.length - 1];
+
+if(typeof last === "object"){
+tokens.pop();
+updateLive();
+return true;
 }
 
-/* ================= CLEAR ================= */
+if(["+","-","×","÷"].includes(last)){
+tokens.pop();
+}else if(last.length > 1){
+tokens[tokens.length - 1] = last.slice(0,-1);
+}else{
+tokens.pop();
+}
+
+updateLive();
+return true;
+}
+
+/* ================= CLEAR ALL ================= */
 function clearAll(){
-  if(!expr && !historyEl.children.length) return false;
-  expr = "";
-  grandTotal = 0;
-  historyEl.innerHTML = "";
-  totalEl.innerText = "0";
-  totalEl.classList.remove("negative");
-  updateLive();
-  vibrate(30);
-  return true;
+if(tokens.length === 0 && historyEl.innerHTML === "") return false;
+
+tokens = [];
+percentBase = null;
+historyEl.innerHTML = "";
+updateLive();
+recalculateGrandTotal();
+return true;
 }
 
-/* ================= SWIPE DELETE ================= */
+/* ================= LONG PRESS BACKSPACE ================= */
+let cutTimer = null;
+let cutLongPress = false;
+
+function cutPressStart(e){
+e.preventDefault();
+cutLongPress = false;
+
+cutTimer = setTimeout(()=>{
+if(tokens.length > 0){
+tokens = [];
+percentBase = null;
+updateLive();
+if(navigator.vibrate) navigator.vibrate(25);
+}
+cutLongPress = true;
+}, 450);
+}
+
+function cutPressEnd(e){
+e.preventDefault();
+clearTimeout(cutTimer);
+
+if(!cutLongPress){
+let ok = back();
+if(ok && navigator.vibrate) navigator.vibrate(15);
+}
+}
+
+function cutPressCancel(){
+clearTimeout(cutTimer);
+}
+
+/* ================= SWIPE TO DELETE ================= */
 function enableSwipe(row){
-  let startX=0, dx=0, drag=false;
+let startX = 0, dx = 0, dragging = false;
 
-  row.addEventListener("pointerdown", e=>{
-    startX = e.clientX;
-    drag = true;
-    row.classList.add("swiping");
-    row.style.transition = "none";
-  });
+row.addEventListener("pointerdown", e=>{
+startX = e.clientX;
+dragging = true;
+row.classList.add("swiping");
+row.style.transition = "none";
+});
 
-  row.addEventListener("pointermove", e=>{
-    if(!drag) return;
-    dx = e.clientX - startX;
-    if(dx < 0) row.style.transform = `translateX(${dx}px)`;
-  });
+row.addEventListener("pointermove", e=>{
+if(!dragging) return;
+dx = e.clientX - startX;
+if(dx < 0) row.style.transform = translateX(${dx}px);
+});
 
-  row.addEventListener("pointerup", ()=>{
-    drag = false;
-    row.style.transition = "transform .25s ease";
+row.addEventListener("pointerup", ()=>{
+dragging = false;
+row.style.transition = "transform .25s ease";
 
-    if(Math.abs(dx) > row.offsetWidth * 0.35){
-      let v = Number(row.dataset.value);
-      if(!isNaN(v)) grandTotal = clean(grandTotal - v);
-      totalEl.innerText = formatIN(grandTotal);
-      totalEl.classList.toggle("negative", grandTotal < 0);
+if(Math.abs(dx) > row.offsetWidth * 0.35){  
+  row.style.transform = "translateX(-100%)";  
+  setTimeout(()=>{  
+    row.remove();  
+    recalculateGrandTotal();  
+    if(navigator.vibrate) navigator.vibrate(20);  
+  },200);  
+}else{  
+  row.style.transform = "translateX(0)";  
+  row.classList.remove("swiping");  
+}  
+dx = 0;
 
-      row.style.transform = "translateX(-100%)";
-      setTimeout(()=>row.remove(),200);
-      vibrate(20);
-    }else{
-      row.style.transform = "translateX(0)";
-      row.classList.remove("swiping");
-    }
-    dx = 0;
-  });
+});
+
+row.addEventListener("pointercancel", ()=>{
+dragging = false;
+row.style.transform = "translateX(0)";
+row.classList.remove("swiping");
+});
 }
 
 /* INIT */
 updateLive();
+recalculateGrandTotal();
