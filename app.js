@@ -1,10 +1,8 @@
 let historyEl = document.getElementById("history");
-let liveEl = document.getElementById("live");
-let totalEl = document.getElementById("total");
+let liveEl    = document.getElementById("live");
+let totalEl   = document.getElementById("total");
 
 let tokens = [];
-
-/* % chaining */
 let percentBase = null;
 
 /* ================= TAP ================= */
@@ -16,6 +14,15 @@ function tap(fn){
 /* ================= HELPERS ================= */
 function clean(n){
   return Number(parseFloat(n).toFixed(10));
+}
+
+/* 🔴 VERY IMPORTANT
+   Scientific notation (e- / e+) ko decimal string me convert */
+function normalizeNumber(n){
+  if (!isFinite(n)) return "0";
+  let s = n.toString();
+  if (!s.includes("e")) return s;
+  return n.toFixed(12).replace(/\.?0+$/, "");
 }
 
 function scrollHistoryToBottom(){
@@ -33,12 +40,13 @@ function recalculateGrandTotal(){
   });
 
   sum = clean(sum);
-  totalEl.innerText = formatIN(sum.toString());
-  sum < 0 ? totalEl.classList.add("negative")
-          : totalEl.classList.remove("negative");
+  totalEl.innerText = formatIN(normalizeNumber(sum));
+  sum < 0
+    ? totalEl.classList.add("negative")
+    : totalEl.classList.remove("negative");
 }
 
-/* ================= NUMBER FORMAT ================= */
+/* ================= NUMBER FORMAT (INDIAN) ================= */
 function formatIN(str){
   if(str==="" || str==="-") return str;
 
@@ -55,13 +63,15 @@ function formatIN(str){
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(typeof t === "object") return t.text;
+  if(typeof t === "object"){
+    return t.text.replace("%"," %");   // spacing fix
+  }
 
-  // ⭐ IMPORTANT FIX: keep trailing dot visible
+  // 🔴 DOT FIX — never format if ends with dot
   if(typeof t === "string" && t.endsWith(".")) return t;
 
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
-  if(/^\d/.test(t)) return formatIN(t);
+  if(/^\d/.test(t))  return formatIN(t);
   return t;
 }
 
@@ -79,42 +89,33 @@ function digit(d){
 
   if(tokens.length === 0){
     tokens.push(d === "." ? "0." : d);
-    updateLive(); 
-    return true;
+    updateLive(); return true;
   }
 
   if(last === "-" && tokens.length === 1){
     tokens[0] = (d === ".") ? "-0." : "-" + d;
-    updateLive(); 
-    return true;
+    updateLive(); return true;
   }
 
   if(["+","-","×","÷"].includes(last)){
     tokens.push(d === "." ? "0." : d);
-    updateLive(); 
-    return true;
+    updateLive(); return true;
   }
 
   if(typeof last === "object") return false;
-
   if(d === "." && last.includes(".")) return false;
 
   let pure = last.replace("-","").replace(".","");
   if(d !== "." && pure.length >= 12) return false;
 
   tokens[tokens.length - 1] += d;
-  updateLive(); 
-  return true;
+  updateLive(); return true;
 }
 
 /* ================= OPERATOR ================= */
 function setOp(op){
   if(tokens.length === 0){
-    if(op === "-"){ 
-      tokens.push("-"); 
-      updateLive(); 
-      return true; 
-    }
+    if(op === "-"){ tokens.push("-"); updateLive(); return true; }
     return false;
   }
 
@@ -127,11 +128,10 @@ function setOp(op){
     tokens.push(op);
   }
 
-  updateLive(); 
-  return true;
+  updateLive(); return true;
 }
 
-/* ================= PERCENT ================= */
+/* ================= PERCENT (NORMAL MODE ONLY) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -193,7 +193,7 @@ function enter(){
     <span class="h-exp">
       ${tokens.map(formatTokenForDisplay).join(" ")} =
     </span>
-    <span class="h-res">${formatIN(result.toString())}</span>
+    <span class="h-res">${formatIN(normalizeNumber(result))}</span>
   `;
 
   if(result < 0) row.querySelector(".h-res").classList.add("negative");
@@ -218,8 +218,7 @@ function back(){
 
   if(typeof last === "object"){
     tokens.pop();
-    updateLive();
-    return true;
+    updateLive(); return true;
   }
 
   if(["+","-","×","÷"].includes(last)){
