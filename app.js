@@ -55,7 +55,7 @@ function formatIN(str){
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(typeof t === "object") return t.text;       // percent
+  if(typeof t === "object") return t.text;
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
@@ -71,6 +71,8 @@ function updateLive(){
 
 /* ================= DIGIT ================= */
 function digit(d){
+  percentBase = null; // 🔑 RESET %
+
   let last = tokens[tokens.length - 1];
 
   if(tokens.length === 0){
@@ -89,7 +91,6 @@ function digit(d){
   }
 
   if(typeof last === "object") return false;
-
   if(d === "." && last.includes(".")) return false;
 
   let pure = last.replace("-","").replace(".","");
@@ -101,6 +102,8 @@ function digit(d){
 
 /* ================= OPERATOR ================= */
 function setOp(op){
+  percentBase = null; // 🔑 RESET %
+
   if(tokens.length === 0){
     if(op === "-"){ tokens.push("-"); updateLive(); return true; }
     return false;
@@ -118,7 +121,7 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* ================= PERCENT (CORRECT UX) ================= */
+/* ================= PERCENT (SAFE & CORRECT) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -127,11 +130,13 @@ function applyPercent(){
   if(isNaN(last)) return false;
 
   let B = Number(last);
-  let base =
-    percentBase ??
-    (tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
-      ? Number(tokens[tokens.length - 3])
-      : null);
+  let base = null;
+
+  if(percentBase !== null){
+    base = percentBase;
+  }else if(tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])){
+    base = Number(tokens[tokens.length - 3]);
+  }
 
   if(base === null) return false;
 
@@ -144,7 +149,6 @@ function applyPercent(){
     percentBase = base;
   }
 
-  // Replace number with percent-object
   tokens[tokens.length - 1] = {
     text: B + "%",
     value: value
@@ -178,9 +182,7 @@ function enter(){
   row.dataset.value = result;
 
   row.innerHTML = `
-    <span class="h-exp">
-      ${tokens.map(formatTokenForDisplay).join(" ")} =
-    </span>
+    <span class="h-exp">${tokens.map(formatTokenForDisplay).join(" ")} =</span>
     <span class="h-res">${formatIN(result.toString())}</span>
   `;
 
@@ -200,6 +202,8 @@ function enter(){
 
 /* ================= BACKSPACE ================= */
 function back(){
+  percentBase = null; // 🔑 RESET %
+
   if(tokens.length === 0) return false;
 
   let last = tokens[tokens.length - 1];
