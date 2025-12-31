@@ -3,8 +3,6 @@ let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 
 let tokens = [];
-
-/* % chaining */
 let percentBase = null;
 
 /* ================= TAP ================= */
@@ -38,11 +36,10 @@ function recalculateGrandTotal(){
           : totalEl.classList.remove("negative");
 }
 
-/* ================= NUMBER FORMAT (FIXED) ================= */
+/* ================= NUMBER FORMAT ================= */
 function formatIN(str){
   if(str === "" || str === "-") return str;
 
-  // 🔒 SCIENTIFIC NOTATION SAFE
   if(/[eE]/.test(str)){
     return Number(str).toString();
   }
@@ -131,7 +128,7 @@ function setOp(op){
   return true;
 }
 
-/* ================= PERCENT ================= */
+/* ================= PERCENT (SPACING FIXED) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -158,7 +155,7 @@ function applyPercent(){
   }
 
   tokens[tokens.length - 1] = {
-    text: B + "%",
+    text: B + " %",
     value: value
   };
 
@@ -250,39 +247,6 @@ function clearAll(){
   return true;
 }
 
-/* ================= LONG PRESS BACKSPACE ================= */
-let cutTimer = null;
-let cutLongPress = false;
-
-function cutPressStart(e){
-  e.preventDefault();
-  cutLongPress = false;
-
-  cutTimer = setTimeout(()=>{
-    if(tokens.length > 0){
-      tokens = [];
-      percentBase = null;
-      updateLive();
-      if(navigator.vibrate) navigator.vibrate(25);
-    }
-    cutLongPress = true;
-  }, 450);
-}
-
-function cutPressEnd(e){
-  e.preventDefault();
-  clearTimeout(cutTimer);
-
-  if(!cutLongPress){
-    let ok = back();
-    if(ok && navigator.vibrate) navigator.vibrate(15);
-  }
-}
-
-function cutPressCancel(){
-  clearTimeout(cutTimer);
-}
-
 /* ================= SWIPE DELETE ================= */
 function enableSwipe(row){
   let startX = 0, dx = 0, dragging = false;
@@ -316,12 +280,6 @@ function enableSwipe(row){
       row.classList.remove("swiping");
     }
     dx = 0;
-  });
-
-  row.addEventListener("pointercancel", ()=>{
-    dragging = false;
-    row.style.transform = "translateX(0)";
-    row.classList.remove("swiping");
   });
 }
 
