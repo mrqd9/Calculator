@@ -4,11 +4,15 @@ const liveEl    = document.getElementById("live");
 const totalEl   = document.getElementById("total");
 
 /* ================= STATE ================= */
-let tokens = [];
-let percentBase = null;
+let expr = "";
+let grandTotal = 0;
 
 /* ================= UTILS ================= */
 const vibrate = ms => navigator.vibrate && navigator.vibrate(ms);
+
+function clean(n){
+  return Number(parseFloat(n).toPrecision(15));
+}
 
 function scrollHistory(){
   requestAnimationFrame(()=>{
@@ -17,231 +21,155 @@ function scrollHistory(){
 }
 
 /* ================= FORMAT ================= */
-function formatIN(str){
-  if(str === "" || str === "-") return str;
+function formatIN(n){
+  if(n === "" || n === "-") return n;
+  let str = String(n);
+  if(str.includes("e")) return str;
 
-  let [i,d] = String(str).split(".");
-  i = i.replace(/\D/g,"");
-
-  let last3 = i.slice(-3);
-  let rest  = i.slice(0,-3);
-  if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
-
-  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
-}
-
-function displayNumber(n){
-  if(!isFinite(n)) return "Error";
-
-  let s = math.format(n,{
-    notation: "auto",
-    precision: 12
-  });
-
-  if(s.includes("e")) return s;
-  return formatIN(s);
+  let [i,d] = str.split(".");
+  i = i.replace(/\B(?=(\d{3})+(?!\d))/g,",");
+  return d ? i + "." + d : i;
 }
 
 /* ================= LIVE ================= */
 function updateLive(){
-  const text = tokens.map(t=>{
-    if(typeof t === "object") return t.text;
-    if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
-    if(/^\d/.test(t)) return formatIN(t);
-    return t;
-  }).join(" ");
-
-  liveEl.innerHTML = text
-    ? `${text}<span class="caret"></span>`
+  liveEl.innerHTML = expr
+    ? `${formatIN(expr)}<span class="caret"></span>`
     : `<span class="caret"></span>`;
-}
-
-/* ================= GRAND TOTAL ================= */
-function recalcTotal(){
-  let sum = math.bignumber(0);
-
-  document.querySelectorAll(".h-row").forEach(r=>{
-    const v = r.dataset.value;
-    if(v) sum = math.add(sum, math.bignumber(v));
-  });
-
-  totalEl.innerText = displayNumber(sum);
-  totalEl.classList.toggle("negative", sum < 0);
 }
 
 /* ================= INPUT ================= */
 function digit(d){
-  percentBase = null;
-
-  let last = tokens.at(-1);
-
-  if(!tokens.length){
-    tokens.push(d === "." ? "0." : d);
-    updateLive(); return true;
-  }
-
-  if(last === "-" && tokens.length === 1){
-    tokens[0] = d === "." ? "-0." : "-" + d;
-    updateLive(); return true;
-  }
-
-  if(["+","-","×","÷"].includes(last)){
-    tokens.push(d === "." ? "0." : d);
-    updateLive(); return true;
-  }
-
-  if(typeof last === "object") return false;
-  if(d === "." && last.includes(".")) return false;
-
-  tokens[tokens.length-1] += d;
-  updateLive(); return true;
+  if(d === "." && /(\.\d*)$/.test(expr)) return false;
+  expr += d;
+  updateLive();
+  vibrate(8);
+  return true;
 }
 
 function setOp(op){
-  percentBase = null;
+  if(!expr && op !== "-") return false;
 
-  if(!tokens.length){
-    if(op === "-"){
-      tokens.push("-");
-      updateLive(); return true;
-    }
-    return false;
+  if(/[+\-×÷]$/.test(expr)){
+    expr = expr.slice(0,-1) + op;
+  }else{
+    expr += op;
   }
-
-  let last = tokens.at(-1);
-  if(last === "-" && tokens.length === 1) return false;
-
-  ["+","-","×","÷"].includes(last)
-    ? tokens[tokens.length-1] = op
-    : tokens.push(op);
-
-  updateLive(); return true;
+  updateLive();
+  vibrate(8);
+  return true;
 }
 
-/* ================= PERCENT ================= */
+/* ================= ADVANCED % ================= */
 function applyPercent(){
-  if(tokens.length < 2) return false;
+  if(!expr) return false;
 
-  let last = tokens.at(-1);
-  let op   = tokens.at(-2);
+  // last number
+  let numMatch = expr.match(/(-?\d+\.?\d*)$/);
+  if(!numMatch) return false;
 
-  if(isNaN(last)) return false;
+  let B = Number(numMatch[1]);
 
-  let B = math.bignumber(last);
-  let base;
-
-  if(percentBase !== null){
-    base = percentBase;
-  }else if(tokens.length >= 3 && !isNaN(tokens.at(-3))){
-    base = math.bignumber(tokens.at(-3));
-  }else{
-    return false;
-  }
+  // left side operator + base
+  let left = expr.slice(0, numMatch.index);
+  let opMatch = left.match(/([+\-×÷])\s*(-?\d+\.?\d*)$/);
 
   let value;
 
-  if(op === "+" || op === "-"){
-    value = math.divide(math.multiply(base, B), 100);
-    percentBase = op === "+"
-      ? math.add(base, value)
-      : math.subtract(base, value);
+  if(opMatch){
+    let op = opMatch[1];
+    let A = Number(opMatch[2]);
+
+    if(op === "+" || op === "-"){
+      value = A * B / 100;
+    }else{
+      value = B / 100;
+    }
   }else{
-    value = math.divide(B, 100);
-    percentBase = base;
+    value = B / 100;
   }
 
-  tokens[tokens.length-1] = {
-    text: last + "%",
-    value: value.toString()
-  };
-
-  updateLive(); return true;
+  expr = left + value;
+  updateLive();
+  vibrate(10);
+  return true;
 }
 
 /* ================= EVALUATE ================= */
-function evaluate(){
-  let expr = tokens.map(t=>{
-    if(typeof t === "object") return t.value;
-    if(t === "×") return "*";
-    if(t === "÷") return "/";
-    return t;
-  }).join(" ");
+function evaluateExpression(){
+  let safe = expr
+    .replace(/×/g,"*")
+    .replace(/÷/g,"/");
 
-  return math.evaluate(expr);
+  return clean(Function("return " + safe)());
 }
 
 /* ================= ENTER ================= */
 function enter(){
-  if(!tokens.length) return false;
+  if(!expr) return false;
 
   let result;
   try{
-    result = evaluate();
+    result = evaluateExpression();
   }catch{
     return false;
   }
 
-  const row = document.createElement("div");
+  let row = document.createElement("div");
   row.className = "h-row";
-  row.dataset.value = result.toString();
+  row.dataset.value = result;
 
   row.innerHTML = `
-    <span class="h-exp">${tokens.map(t=>typeof t==="object"?t.text:t).join(" ")} =</span>
-    <span class="h-res">${displayNumber(result)}</span>
+    <span class="h-exp">${formatIN(expr)} =</span>
+    <span class="h-res">${formatIN(result)}</span>
   `;
 
-  if(result < 0) row.querySelector(".h-res").classList.add("negative");
+  if(result < 0){
+    row.querySelector(".h-res").classList.add("negative");
+  }
 
   enableSwipe(row);
   historyEl.appendChild(row);
 
-  tokens = [];
-  percentBase = null;
+  grandTotal = clean(grandTotal + result);
+  totalEl.innerText = formatIN(grandTotal);
+  totalEl.classList.toggle("negative", grandTotal < 0);
+
+  expr = "";
   updateLive();
-  recalcTotal();
   scrollHistory();
-  vibrate(15);
+  vibrate(20);
   return true;
 }
 
 /* ================= BACKSPACE ================= */
 function back(){
-  if(!tokens.length) return false;
-
-  percentBase = null;
-  let last = tokens.at(-1);
-
-  if(typeof last === "object"){
-    tokens.pop();
-  }else if(last.length > 1){
-    tokens[tokens.length-1] = last.slice(0,-1);
-  }else{
-    tokens.pop();
-  }
-
+  if(!expr) return false;
+  expr = expr.slice(0,-1);
   updateLive();
+  vibrate(8);
   return true;
 }
 
 /* ================= CLEAR ================= */
 function clearAll(){
-  if(!tokens.length && !historyEl.children.length) return false;
-
-  tokens = [];
-  percentBase = null;
+  if(!expr && !historyEl.children.length) return false;
+  expr = "";
+  grandTotal = 0;
   historyEl.innerHTML = "";
+  totalEl.innerText = "0";
+  totalEl.classList.remove("negative");
   updateLive();
-  recalcTotal();
-  vibrate(20);
+  vibrate(30);
   return true;
 }
 
 /* ================= SWIPE DELETE ================= */
 function enableSwipe(row){
-  let sx=0, dx=0, drag=false;
+  let startX=0, dx=0, drag=false;
 
   row.addEventListener("pointerdown", e=>{
-    sx = e.clientX;
+    startX = e.clientX;
     drag = true;
     row.classList.add("swiping");
     row.style.transition = "none";
@@ -249,7 +177,7 @@ function enableSwipe(row){
 
   row.addEventListener("pointermove", e=>{
     if(!drag) return;
-    dx = e.clientX - sx;
+    dx = e.clientX - startX;
     if(dx < 0) row.style.transform = `translateX(${dx}px)`;
   });
 
@@ -258,12 +186,14 @@ function enableSwipe(row){
     row.style.transition = "transform .25s ease";
 
     if(Math.abs(dx) > row.offsetWidth * 0.35){
+      let v = Number(row.dataset.value);
+      if(!isNaN(v)) grandTotal = clean(grandTotal - v);
+      totalEl.innerText = formatIN(grandTotal);
+      totalEl.classList.toggle("negative", grandTotal < 0);
+
       row.style.transform = "translateX(-100%)";
-      setTimeout(()=>{
-        row.remove();
-        recalcTotal();
-        vibrate(20);
-      },200);
+      setTimeout(()=>row.remove(),200);
+      vibrate(20);
     }else{
       row.style.transform = "translateX(0)";
       row.classList.remove("swiping");
@@ -274,4 +204,3 @@ function enableSwipe(row){
 
 /* INIT */
 updateLive();
-recalcTotal();
