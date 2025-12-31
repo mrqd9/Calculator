@@ -4,8 +4,8 @@ let totalEl = document.getElementById("total");
 
 let tokens = [];
 
-/* % chaining helpers */
-let percentNotes = [];
+/* % helpers */
+let percentDisplay = [];   // stores "5%" etc
 let percentBase = null;
 
 /* ================= TAP ================= */
@@ -25,7 +25,7 @@ function scrollHistoryToBottom(){
   });
 }
 
-/* ================= GRAND TOTAL (SAFE) ================= */
+/* ================= GRAND TOTAL ================= */
 function recalculateGrandTotal(){
   let sum = 0;
   document.querySelectorAll(".h-row").forEach(row=>{
@@ -35,12 +35,11 @@ function recalculateGrandTotal(){
 
   sum = clean(sum);
   totalEl.innerText = formatIN(sum.toString());
-
-  if(sum < 0) totalEl.classList.add("negative");
-  else totalEl.classList.remove("negative");
+  sum < 0 ? totalEl.classList.add("negative")
+          : totalEl.classList.remove("negative");
 }
 
-/* ================= NUMBER FORMAT ================= */
+/* ================= FORMAT ================= */
 function formatIN(str){
   if(str==="" || str==="-") return str;
 
@@ -52,19 +51,13 @@ function formatIN(str){
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  let out = (rest ? rest + "," : "") + last3;
-  if(d !== undefined) return out + "." + d;
-  return out;
+  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
 }
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(/^-\d/.test(t)){
-    return "- " + formatIN(t.slice(1));
-  }
-  if(/^\d/.test(t)){
-    return formatIN(t);
-  }
+  if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
+  if(/^\d/.test(t)) return formatIN(t);
   return t;
 }
 
@@ -82,20 +75,17 @@ function digit(d){
 
   if(tokens.length === 0){
     tokens.push(d === "." ? "0." : d);
-    updateLive();
-    return true;
+    updateLive(); return true;
   }
 
   if(last === "-" && tokens.length === 1){
     tokens[0] = (d === ".") ? "-0." : "-" + d;
-    updateLive();
-    return true;
+    updateLive(); return true;
   }
 
   if(["+","-","×","÷"].includes(last)){
     tokens.push(d === "." ? "0." : d);
-    updateLive();
-    return true;
+    updateLive(); return true;
   }
 
   if(d === "." && last.includes(".")) return false;
@@ -104,79 +94,60 @@ function digit(d){
   if(d !== "." && pure.length >= 12) return false;
 
   tokens[tokens.length - 1] += d;
-  updateLive();
-  return true;
+  updateLive(); return true;
 }
 
 /* ================= OPERATOR ================= */
 function setOp(op){
   if(tokens.length === 0){
-    if(op === "-"){
-      tokens.push("-");
-      updateLive();
-      return true;
-    }
+    if(op === "-"){ tokens.push("-"); updateLive(); return true; }
     return false;
   }
 
   let last = tokens[tokens.length - 1];
-
-  // protect unary minus
   if(last === "-" && tokens.length === 1) return false;
 
-  if(["+","-","×","÷"].includes(last)){
-    tokens[tokens.length - 1] = op;
-  }else{
-    tokens.push(op);
-  }
+  ["+","-","×","÷"].includes(last)
+    ? tokens[tokens.length - 1] = op
+    : tokens.push(op);
 
-  updateLive();
-  return true;
+  updateLive(); return true;
 }
 
-/* ================= PERCENT (CHAINING) ================= */
+/* ================= PERCENT ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
   let last = tokens[tokens.length - 1];
   let op   = tokens[tokens.length - 2];
-
   if(isNaN(last)) return false;
 
   let B = Number(last);
-  let base;
+  let base = percentBase ??
+    (tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
+      ? Number(tokens[tokens.length - 3]) : null);
 
-  if(percentBase !== null){
-    base = percentBase;
-  }else if(tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])){
-    base = Number(tokens[tokens.length - 3]);
-  }else{
-    return false;
-  }
+  if(base === null) return false;
 
   let value;
   if(op === "+" || op === "-"){
     value = base * B / 100;
     percentBase = base + (op === "+" ? value : -value);
-  }else if(op === "×" || op === "÷"){
+  }else{
     value = B / 100;
     percentBase = base;
-  }else{
-    return false;
   }
 
-  percentNotes.push(`(${formatIN(value.toString())})`);
+  percentDisplay.push(B + "%");
   tokens[tokens.length - 1] = value.toString();
-  updateLive();
-  return true;
+  updateLive(); return true;
 }
 
 /* ================= EVALUATE ================= */
 function evaluate(){
-  let exp = tokens.join(" ")
-    .replace(/×/g,"*")
-    .replace(/÷/g,"/");
-  return clean(Function("return " + exp)());
+  return clean(Function(
+    "return " + tokens.join(" ").replace(/×/g,"*").replace(/÷/g,"/")
+  )());
 }
 
 /* ================= ENTER ================= */
@@ -184,11 +155,7 @@ function enter(){
   if(tokens.length === 0) return false;
 
   let result;
-  try{
-    result = evaluate();
-  }catch{
-    return false;
-  }
+  try{ result = evaluate(); }catch{ return false; }
 
   let row = document.createElement("div");
   row.className = "h-row";
@@ -197,24 +164,20 @@ function enter(){
   row.innerHTML = `
     <span class="h-exp">
       ${tokens.map(formatTokenForDisplay).join(" ")}
-      ${percentNotes.join(" ")}
-      =
+      ${percentDisplay.join(" ")} =
     </span>
     <span class="h-res">${formatIN(result.toString())}</span>
   `;
 
-  if(result < 0){
-    row.querySelector(".h-res").classList.add("negative");
-  }
+  if(result < 0) row.querySelector(".h-res").classList.add("negative");
 
   enableSwipe(row);
   historyEl.appendChild(row);
 
   tokens = [];
-  percentNotes = [];
+  percentDisplay = [];
   percentBase = null;
   updateLive();
-
   recalculateGrandTotal();
   scrollHistoryToBottom();
   return true;
@@ -223,98 +186,49 @@ function enter(){
 /* ================= BACKSPACE ================= */
 function back(){
   if(tokens.length === 0) return false;
-
   let last = tokens[tokens.length - 1];
 
-  if(["+","-","×","÷"].includes(last)){
-    tokens.pop();
-  }else if(last.length > 1){
-    tokens[tokens.length - 1] = last.slice(0,-1);
-  }else{
-    tokens.pop();
-  }
+  ["+","-","×","÷"].includes(last)
+    ? tokens.pop()
+    : last.length > 1
+      ? tokens[tokens.length - 1] = last.slice(0,-1)
+      : tokens.pop();
 
-  updateLive();
-  return true;
+  updateLive(); return true;
 }
 
 /* ================= CLEAR ALL ================= */
 function clearAll(){
   if(tokens.length === 0 && historyEl.innerHTML === "") return false;
-
-  tokens = [];
-  percentNotes = [];
-  percentBase = null;
+  tokens = []; percentDisplay = []; percentBase = null;
   historyEl.innerHTML = "";
-  updateLive();
-  recalculateGrandTotal();
+  updateLive(); recalculateGrandTotal();
   return true;
 }
 
-/* ================= LONG PRESS BACKSPACE ================= */
-let cutTimer = null;
-let cutLongPress = false;
-
-function cutPressStart(e){
-  e.preventDefault();
-  cutLongPress = false;
-
-  cutTimer = setTimeout(()=>{
-    if(tokens.length > 0){
-      tokens = [];
-      percentNotes = [];
-      percentBase = null;
-      updateLive();
-      if(navigator.vibrate) navigator.vibrate(25);
-    }
-    cutLongPress = true;
-  }, 450);
-}
-
-function cutPressEnd(e){
-  e.preventDefault();
-  clearTimeout(cutTimer);
-
-  if(!cutLongPress){
-    let ok = back();
-    if(ok && navigator.vibrate) navigator.vibrate(15);
-  }
-}
-
-function cutPressCancel(){
-  clearTimeout(cutTimer);
-}
-
-/* ================= SWIPE TO DELETE ================= */
+/* ================= SWIPE DELETE ================= */
 function enableSwipe(row){
-  let startX = 0;
-  let dx = 0;
-  let dragging = false;
+  let startX = 0, dx = 0, dragging = false;
 
   row.addEventListener("pointerdown", e=>{
     startX = e.clientX;
     dragging = true;
     row.classList.add("swiping");
     row.style.transition = "none";
-    row.style.willChange = "transform";
   });
 
   row.addEventListener("pointermove", e=>{
     if(!dragging) return;
     dx = e.clientX - startX;
-    if(dx < 0){
-      row.style.transform = `translateX(${dx}px)`;
-    }
+    if(dx < 0) row.style.transform = `translateX(${dx}px)`;
   });
 
   row.addEventListener("pointerup", ()=>{
     dragging = false;
     row.style.transition = "transform .25s ease";
-    row.style.willChange = "auto";
 
     if(Math.abs(dx) > row.offsetWidth * 0.35){
       row.style.transform = "translateX(-100%)";
-      if(navigator.vibrate) navigator.vibrate(20);
       setTimeout(()=>{
         row.remove();
         recalculateGrandTotal();
@@ -324,13 +238,6 @@ function enableSwipe(row){
       row.classList.remove("swiping");
     }
     dx = 0;
-  });
-
-  row.addEventListener("pointercancel", ()=>{
-    dragging = false;
-    row.style.transform = "translateX(0)";
-    row.style.willChange = "auto";
-    row.classList.remove("swiping");
   });
 }
 
