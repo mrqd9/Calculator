@@ -4,8 +4,7 @@ let totalEl = document.getElementById("total");
 
 let tokens = [];
 
-/* % helpers */
-let percentDisplay = [];   // stores "5%" etc
+/* % chaining helpers */
 let percentBase = null;
 
 /* ================= TAP ================= */
@@ -25,7 +24,7 @@ function scrollHistoryToBottom(){
   });
 }
 
-/* ================= GRAND TOTAL ================= */
+/* ================= GRAND TOTAL (SAFE) ================= */
 function recalculateGrandTotal(){
   let sum = 0;
   document.querySelectorAll(".h-row").forEach(row=>{
@@ -39,7 +38,7 @@ function recalculateGrandTotal(){
           : totalEl.classList.remove("negative");
 }
 
-/* ================= FORMAT ================= */
+/* ================= NUMBER FORMAT ================= */
 function formatIN(str){
   if(str==="" || str==="-") return str;
 
@@ -51,7 +50,9 @@ function formatIN(str){
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
+  let out = (rest ? rest + "," : "") + last3;
+  if(d !== undefined) return out + "." + d;
+  return out;
 }
 
 /* ================= TOKEN DISPLAY ================= */
@@ -114,7 +115,7 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* ================= PERCENT ================= */
+/* ================= PERCENT (USER INTENT ONLY) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -123,9 +124,11 @@ function applyPercent(){
   if(isNaN(last)) return false;
 
   let B = Number(last);
-  let base = percentBase ??
+  let base =
+    percentBase ??
     (tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
-      ? Number(tokens[tokens.length - 3]) : null);
+      ? Number(tokens[tokens.length - 3])
+      : null);
 
   if(base === null) return false;
 
@@ -138,15 +141,23 @@ function applyPercent(){
     percentBase = base;
   }
 
-  percentDisplay.push(B + "%");
+  /* replace number with calculated value,
+     but KEEP % symbol in tokens */
   tokens[tokens.length - 1] = value.toString();
-  updateLive(); return true;
+  tokens.splice(tokens.length - 1, 0, B + "%");
+
+  updateLive();
+  return true;
 }
 
 /* ================= EVALUATE ================= */
 function evaluate(){
   return clean(Function(
-    "return " + tokens.join(" ").replace(/×/g,"*").replace(/÷/g,"/")
+    "return " + tokens
+      .filter(t => !t.endsWith("%")) // ignore % tokens
+      .join(" ")
+      .replace(/×/g,"*")
+      .replace(/÷/g,"/")
   )());
 }
 
@@ -163,8 +174,7 @@ function enter(){
 
   row.innerHTML = `
     <span class="h-exp">
-      ${tokens.map(formatTokenForDisplay).join(" ")}
-      ${percentDisplay.join(" ")} =
+      ${tokens.map(formatTokenForDisplay).join(" ")} =
     </span>
     <span class="h-res">${formatIN(result.toString())}</span>
   `;
@@ -175,7 +185,6 @@ function enter(){
   historyEl.appendChild(row);
 
   tokens = [];
-  percentDisplay = [];
   percentBase = null;
   updateLive();
   recalculateGrandTotal();
@@ -186,8 +195,8 @@ function enter(){
 /* ================= BACKSPACE ================= */
 function back(){
   if(tokens.length === 0) return false;
-  let last = tokens[tokens.length - 1];
 
+  let last = tokens[tokens.length - 1];
   ["+","-","×","÷"].includes(last)
     ? tokens.pop()
     : last.length > 1
@@ -200,9 +209,11 @@ function back(){
 /* ================= CLEAR ALL ================= */
 function clearAll(){
   if(tokens.length === 0 && historyEl.innerHTML === "") return false;
-  tokens = []; percentDisplay = []; percentBase = null;
+  tokens = [];
+  percentBase = null;
   historyEl.innerHTML = "";
-  updateLive(); recalculateGrandTotal();
+  updateLive();
+  recalculateGrandTotal();
   return true;
 }
 
