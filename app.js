@@ -55,6 +55,7 @@ function formatIN(str){
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
+  if(typeof t === "object") return t.text;       // percent
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
@@ -87,6 +88,8 @@ function digit(d){
     updateLive(); return true;
   }
 
+  if(typeof last === "object") return false;
+
   if(d === "." && last.includes(".")) return false;
 
   let pure = last.replace("-","").replace(".","");
@@ -106,14 +109,16 @@ function setOp(op){
   let last = tokens[tokens.length - 1];
   if(last === "-" && tokens.length === 1) return false;
 
-  ["+","-","×","÷"].includes(last)
-    ? tokens[tokens.length - 1] = op
-    : tokens.push(op);
+  if(["+","-","×","÷"].includes(last)){
+    tokens[tokens.length - 1] = op;
+  }else{
+    tokens.push(op);
+  }
 
   updateLive(); return true;
 }
 
-/* ================= PERCENT ================= */
+/* ================= PERCENT (CORRECT UX) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -139,9 +144,11 @@ function applyPercent(){
     percentBase = base;
   }
 
-  // Insert display token like "5%" before calculated value
-  tokens[tokens.length - 1] = value.toString();
-  tokens.splice(tokens.length - 1, 0, B + "%");
+  // Replace number with percent-object
+  tokens[tokens.length - 1] = {
+    text: B + "%",
+    value: value
+  };
 
   updateLive();
   return true;
@@ -149,9 +156,10 @@ function applyPercent(){
 
 /* ================= EVALUATE ================= */
 function evaluate(){
-  let exp = tokens
-    .filter(t => !t.endsWith("%"))
-    .join(" ")
+  let exp = tokens.map(t=>{
+    if(typeof t === "object") return t.value;
+    return t;
+  }).join(" ")
     .replace(/×/g,"*")
     .replace(/÷/g,"/");
 
@@ -196,22 +204,15 @@ function back(){
 
   let last = tokens[tokens.length - 1];
 
-  // % token
-  if(last.endsWith("%")){
+  if(typeof last === "object"){
     tokens.pop();
     updateLive();
     return true;
   }
 
-  // operator
   if(["+","-","×","÷"].includes(last)){
     tokens.pop();
-    updateLive();
-    return true;
-  }
-
-  // number
-  if(last.length > 1){
+  }else if(last.length > 1){
     tokens[tokens.length - 1] = last.slice(0,-1);
   }else{
     tokens.pop();
