@@ -3,6 +3,8 @@ let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 
 let tokens = [];
+
+/* % chaining */
 let percentBase = null;
 
 /* ================= TAP ================= */
@@ -13,7 +15,7 @@ function tap(fn){
 
 /* ================= HELPERS ================= */
 function clean(n){
-  return Number(Number(n).toPrecision(15));
+  return Number(parseFloat(n).toFixed(10));
 }
 
 function scrollHistoryToBottom(){
@@ -22,44 +24,38 @@ function scrollHistoryToBottom(){
   });
 }
 
-/* ================= GRAND TOTAL (SAFE) ================= */
+/* ================= GRAND TOTAL ================= */
 function recalculateGrandTotal(){
   let sum = 0;
   document.querySelectorAll(".h-row").forEach(row=>{
     let v = Number(row.dataset.value);
     if(!isNaN(v)) sum += v;
   });
+
   sum = clean(sum);
-  totalEl.innerText = formatIN(String(sum));
-  totalEl.classList.toggle("negative", sum < 0);
+  totalEl.innerText = formatIN(sum.toString());
+  sum < 0 ? totalEl.classList.add("negative")
+          : totalEl.classList.remove("negative");
 }
 
 /* ================= NUMBER FORMAT ================= */
 function formatIN(str){
   if(str === "" || str === "-") return str;
 
-  if(str.includes("e") || str.includes("E")) return str;
-
-  let neg = str.startsWith("-");
-  if(neg) str = str.slice(1);
-
   let parts = str.split(".");
   let i = parts[0].replace(/\D/g,"");
-  let d = parts.length > 1 ? parts[1] : null;
+  let d = parts[1];
 
   let last3 = i.slice(-3);
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  let out = (rest ? rest + "," : "") + last3;
-  if(d !== null) out += "." + d;
-
-  return neg ? "- " + out : out;
+  return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(typeof t === "object") return t.text + " ";
+  if(typeof t === "object") return t.text;   // percent
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
@@ -79,17 +75,20 @@ function digit(d){
 
   if(tokens.length === 0){
     tokens.push(d === "." ? "0." : d);
-    updateLive(); return true;
+    updateLive(); 
+    return true;
   }
 
   if(last === "-" && tokens.length === 1){
     tokens[0] = d === "." ? "-0." : "-" + d;
-    updateLive(); return true;
+    updateLive(); 
+    return true;
   }
 
   if(["+","-","×","÷"].includes(last)){
     tokens.push(d === "." ? "0." : d);
-    updateLive(); return true;
+    updateLive(); 
+    return true;
   }
 
   if(typeof last === "object") return false;
@@ -99,13 +98,18 @@ function digit(d){
   if(d !== "." && pure.length >= 12) return false;
 
   tokens[tokens.length - 1] += d;
-  updateLive(); return true;
+  updateLive(); 
+  return true;
 }
 
 /* ================= OPERATOR ================= */
 function setOp(op){
   if(tokens.length === 0){
-    if(op === "-"){ tokens.push("-"); updateLive(); return true; }
+    if(op === "-"){
+      tokens.push("-");
+      updateLive();
+      return true;
+    }
     return false;
   }
 
@@ -118,7 +122,8 @@ function setOp(op){
     tokens.push(op);
   }
 
-  updateLive(); return true;
+  updateLive(); 
+  return true;
 }
 
 /* ================= PERCENT ================= */
@@ -148,8 +153,8 @@ function applyPercent(){
   }
 
   tokens[tokens.length - 1] = {
-    text: B + " %",
-    value: clean(value)
+    text: B + "%",
+    value: value
   };
 
   updateLive();
@@ -180,8 +185,10 @@ function enter(){
   row.dataset.value = result;
 
   row.innerHTML = `
-    <span class="h-exp">${tokens.map(formatTokenForDisplay).join(" ")} =</span>
-    <span class="h-res">${formatIN(String(result))}</span>
+    <span class="h-exp">
+      ${tokens.map(formatTokenForDisplay).join(" ")} =
+    </span>
+    <span class="h-res">${formatIN(result.toString())}</span>
   `;
 
   if(result < 0) row.querySelector(".h-res").classList.add("negative");
@@ -198,7 +205,7 @@ function enter(){
   return true;
 }
 
-/* ================= BACKSPACE ================= */
+/* ================= BACKSPACE (FIXED) ================= */
 function back(){
   if(tokens.length === 0) return false;
 
@@ -206,14 +213,17 @@ function back(){
 
   if(typeof last === "object"){
     tokens.pop();
-    percentBase = null;
     updateLive();
     return true;
   }
 
   if(["+","-","×","÷"].includes(last)){
     tokens.pop();
-  }else if(last.length > 1){
+    updateLive();
+    return true;
+  }
+
+  if(last.length > 1){
     tokens[tokens.length - 1] = last.slice(0,-1);
   }else{
     tokens.pop();
@@ -223,15 +233,49 @@ function back(){
   return true;
 }
 
-/* ================= CLEAR ALL ================= */
+/* ================= CLEAR ================= */
 function clearAll(){
   if(tokens.length === 0 && historyEl.innerHTML === "") return false;
+
   tokens = [];
   percentBase = null;
   historyEl.innerHTML = "";
   updateLive();
   recalculateGrandTotal();
   return true;
+}
+
+/* ================= LONG PRESS BACK ================= */
+let cutTimer = null;
+let cutLongPress = false;
+
+function cutPressStart(e){
+  e.preventDefault();
+  cutLongPress = false;
+
+  cutTimer = setTimeout(()=>{
+    if(tokens.length > 0){
+      tokens = [];
+      percentBase = null;
+      updateLive();
+      if(navigator.vibrate) navigator.vibrate(25);
+    }
+    cutLongPress = true;
+  }, 450);
+}
+
+function cutPressEnd(e){
+  e.preventDefault();
+  clearTimeout(cutTimer);
+
+  if(!cutLongPress){
+    let ok = back();
+    if(ok && navigator.vibrate) navigator.vibrate(15);
+  }
+}
+
+function cutPressCancel(){
+  clearTimeout(cutTimer);
 }
 
 /* ================= SWIPE DELETE ================= */
@@ -260,7 +304,7 @@ function enableSwipe(row){
       setTimeout(()=>{
         row.remove();
         recalculateGrandTotal();
-        navigator.vibrate && navigator.vibrate(20);
+        if(navigator.vibrate) navigator.vibrate(20);
       },200);
     }else{
       row.style.transform = "translateX(0)";
