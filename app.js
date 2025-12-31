@@ -1,329 +1,278 @@
 let historyEl = document.getElementById("history");
-let liveEl = document.getElementById("live");
-let totalEl = document.getElementById("total");
+let liveEl    = document.getElementById("live");
+let totalEl   = document.getElementById("total");
 
 let tokens = [];
 
-/* % chaining */
-let percentBase = null;
-
 /* ================= TAP ================= */
 function tap(fn){
-let ok = fn();
-if(ok && navigator.vibrate) navigator.vibrate(15);
+  let ok = fn();
+  if(ok && navigator.vibrate) navigator.vibrate(15);
 }
 
 /* ================= HELPERS ================= */
 function clean(n){
-return Number(n);
+  return Number(parseFloat(n).toFixed(12));
 }
 
 function scrollHistoryToBottom(){
-requestAnimationFrame(()=>{
-historyEl.scrollTop = historyEl.scrollHeight;
-});
-}
-
-/* ================= NUMBER FORMAT ================= */
-function formatIN(str){
-if(str==="" || str==="-") return str;
-
-let parts = str.split(".");
-let i = parts[0].replace(/\D/g,"");
-let d = parts[1];
-
-let last3 = i.slice(-3);
-let rest  = i.slice(0,-3);
-if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
-
-return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
-}
-
-/* ================= DISPLAY FORMATTERS ================= */
-function displayResult(n){
-if(!isFinite(n)) return "Error";
-const str = n.toString();
-if(str.includes("e")) return n.toExponential(2);
-return formatIN(str);
-}
-
-function displayTotal(n){
-if(!isFinite(n)) return "Error";
-let str = n.toString();
-if(str.includes("e")){
-str = n.toFixed(12).replace(/.?0+$/,"");
-}
-return formatIN(str);
+  requestAnimationFrame(()=>{
+    historyEl.scrollTop = historyEl.scrollHeight;
+  });
 }
 
 /* ================= GRAND TOTAL ================= */
 function recalculateGrandTotal(){
-let sum = 0;
-document.querySelectorAll(".h-row").forEach(row=>{
-let v = Number(row.dataset.value);
-if(!isNaN(v)) sum += v;
-});
+  let sum = 0;
+  document.querySelectorAll(".h-row").forEach(r=>{
+    let v = Number(r.dataset.value);
+    if(!isNaN(v)) sum += v;
+  });
 
-sum = clean(sum);
-totalEl.innerText = displayTotal(sum);
-sum < 0 ? totalEl.classList.add("negative")
-: totalEl.classList.remove("negative");
+  sum = clean(sum);
+  totalEl.innerText = formatIN(sum.toString());
+  totalEl.classList.toggle("negative", sum < 0);
 }
 
-/* ================= TOKEN DISPLAY ================= */
+/* ================= FORMAT ================= */
+function formatIN(str){
+  if(str === "" || str === "-") return str;
+
+  let [i,d] = String(str).split(".");
+  i = i.replace(/\D/g,"");
+
+  let last3 = i.slice(-3);
+  let rest  = i.slice(0,-3);
+  if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+
+  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
+}
+
 function formatTokenForDisplay(t){
-if(typeof t === "object") return t.text;
-if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
-if(/^\d/.test(t)) return formatIN(t);
-return t;
+  if(typeof t === "object") return t.text;
+  if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
+  if(/^\d/.test(t)) return formatIN(t);
+  return t;
 }
 
 /* ================= LIVE ================= */
 function updateLive(){
-let text = tokens.map(formatTokenForDisplay).join(" ");
-liveEl.innerHTML = text
-? ${text}<span class="caret"></span>
-: <span class="caret"></span>;
+  let text = tokens.map(formatTokenForDisplay).join(" ");
+  liveEl.innerHTML = text
+    ? `${text}<span class="caret"></span>`
+    : `<span class="caret"></span>`;
 }
 
 /* ================= DIGIT ================= */
 function digit(d){
-percentBase = null; // 🔥 RESET percent on manual typing
+  let last = tokens.at(-1);
 
-let last = tokens[tokens.length - 1];
+  if(!tokens.length){
+    tokens.push(d === "." ? "0." : d);
+    updateLive(); return true;
+  }
 
-if(tokens.length === 0){
-tokens.push(d === "." ? "0." : d);
-updateLive(); return true;
-}
+  if(last === "-" && tokens.length === 1){
+    tokens[0] = d === "." ? "-0." : "-" + d;
+    updateLive(); return true;
+  }
 
-if(last === "-" && tokens.length === 1){
-tokens[0] = (d === ".") ? "-0." : "-" + d;
-updateLive(); return true;
-}
+  if(["+","-","×","÷"].includes(last)){
+    tokens.push(d === "." ? "0." : d);
+    updateLive(); return true;
+  }
 
-if(["+","-","×","÷"].includes(last)){
-tokens.push(d === "." ? "0." : d);
-updateLive(); return true;
-}
+  if(typeof last === "object") return false;
+  if(d === "." && last.includes(".")) return false;
 
-if(typeof last === "object") return false;
-if(d === "." && last.includes(".")) return false;
+  let pure = last.replace("-","").replace(".","");
+  if(d !== "." && pure.length >= 12) return false;
 
-let pure = last.replace("-","").replace(".","");
-if(d !== "." && pure.length >= 12) return false;
-
-tokens[tokens.length - 1] += d;
-updateLive(); return true;
+  tokens[tokens.length - 1] += d;
+  updateLive(); return true;
 }
 
 /* ================= OPERATOR ================= */
 function setOp(op){
-percentBase = null; // 🔥 RESET percent when operator changes
+  if(!tokens.length){
+    if(op === "-"){ tokens.push("-"); updateLive(); return true; }
+    return false;
+  }
 
-if(tokens.length === 0){
-if(op === "-"){ tokens.push("-"); updateLive(); return true; }
-return false;
+  let last = tokens.at(-1);
+  if(last === "-" && tokens.length === 1) return false;
+
+  ["+","-","×","÷"].includes(last)
+    ? tokens[tokens.length - 1] = op
+    : tokens.push(op);
+
+  updateLive(); return true;
 }
 
-let last = tokens[tokens.length - 1];
-if(last === "-" && tokens.length === 1) return false;
-
-if(["+","-","×","÷"].includes(last)){
-tokens[tokens.length - 1] = op;
-}else{
-tokens.push(op);
-}
-
-updateLive(); return true;
-}
-
-/* ================= PERCENT ================= */
+/* ================= % (BILLING STYLE CHAINING) ================= */
 function applyPercent(){
-if(tokens.length < 2) return false;
+  if(tokens.length < 2) return false;
 
-let last = tokens[tokens.length - 1];
-let op   = tokens[tokens.length - 2];
-if(isNaN(last)) return false;
+  let last = tokens.at(-1);
+  if(typeof last === "object") return false;
+  if(isNaN(last)) return false;
 
-let B = Number(last);
-let base =
-percentBase ??
-(tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
-? Number(tokens[tokens.length - 3])
-: null);
+  let base;
+  try{
+    base = evaluate();        // running subtotal
+  }catch{
+    base = Number(last);
+  }
 
-if(base === null) return false;
+  let value = clean(base * Number(last) / 100);
 
-let value;
-if(op === "+" || op === "-"){
-value = base * B / 100;
-percentBase = base + (op === "+" ? value : -value);
-}else{
-value = B / 100;
-percentBase = base;
+  tokens[tokens.length - 1] = {
+    text: formatIN(last) + "%",
+    value: value
+  };
+
+  updateLive();
+  return true;
 }
 
-tokens[tokens.length - 1] = {
-text: B + "%",
-value: value
-};
-
-updateLive();
-return true;
-}
-
-/* ================= EVALUATE ================= /
+/* ================= EVALUATE ================= */
 function evaluate(){
-let exp = tokens.map(t=>{
-if(typeof t === "object") return t.value;
-return t;
-}).join(" ")
-.replace(/×/g,"")
-.replace(/÷/g,"/");
+  let exp = tokens.map(t=>{
+    if(typeof t === "object") return t.value;
+    return t;
+  }).join(" ")
+    .replace(/×/g,"*")
+    .replace(/÷/g,"/");
 
-return Function("return " + exp)();
+  return clean(Function("return " + exp)());
 }
 
 /* ================= ENTER ================= */
 function enter(){
-if(tokens.length === 0) return false;
+  if(!tokens.length) return false;
 
-let result;
-try{ result = evaluate(); }catch{ return false; }
+  let result;
+  try{ result = evaluate(); }
+  catch{ return false; }
 
-let row = document.createElement("div");
-row.className = "h-row";
-row.dataset.value = result;
+  let row = document.createElement("div");
+  row.className = "h-row";
+  row.dataset.value = result;
 
-row.innerHTML =   <span class="h-exp">   ${tokens.map(formatTokenForDisplay).join(" ")} =   </span>   <span class="h-res">${displayResult(result)}</span>  ;
+  row.innerHTML = `
+    <span class="h-exp">${tokens.map(formatTokenForDisplay).join(" ")} =</span>
+    <span class="h-res">${formatIN(result.toString())}</span>
+  `;
 
-if(result < 0) row.querySelector(".h-res").classList.add("negative");
+  if(result < 0) row.querySelector(".h-res").classList.add("negative");
 
-enableSwipe(row);
-historyEl.appendChild(row);
+  enableSwipe(row);
+  historyEl.appendChild(row);
 
-tokens = [];
-percentBase = null;
-updateLive();
-
-recalculateGrandTotal();
-scrollHistoryToBottom();
-return true;
+  tokens = [];
+  updateLive();
+  recalculateGrandTotal();
+  scrollHistoryToBottom();
+  return true;
 }
 
 /* ================= BACKSPACE ================= */
 function back(){
-if(tokens.length === 0) return false;
+  if(!tokens.length) return false;
 
-percentBase = null; // 🔥 RESET percent on backspace
+  let last = tokens.at(-1);
 
-let last = tokens[tokens.length - 1];
+  if(typeof last === "object" || ["+","-","×","÷"].includes(last)){
+    tokens.pop();
+  }else if(last.length > 1){
+    tokens[tokens.length - 1] = last.slice(0,-1);
+  }else{
+    tokens.pop();
+  }
 
-if(typeof last === "object"){
-tokens.pop();
-updateLive();
-return true;
-}
-
-if(["+","-","×","÷"].includes(last)){
-tokens.pop();
-}else if(last.length > 1){
-tokens[tokens.length - 1] = last.slice(0,-1);
-}else{
-tokens.pop();
-}
-
-updateLive();
-return true;
+  updateLive();
+  return true;
 }
 
 /* ================= CLEAR ALL ================= */
 function clearAll(){
-if(tokens.length === 0 && historyEl.innerHTML === "") return false;
+  if(!tokens.length && !historyEl.innerHTML) return false;
 
-tokens = [];
-percentBase = null;
-historyEl.innerHTML = "";
-updateLive();
-recalculateGrandTotal();
-return true;
+  tokens = [];
+  historyEl.innerHTML = "";
+  updateLive();
+  recalculateGrandTotal();
+  return true;
 }
 
-/* ================= LONG PRESS BACKSPACE ================= */
+/* ================= LONG PRESS BACK ================= */
 let cutTimer = null;
-let cutLongPress = false;
+let cutLong = false;
 
 function cutPressStart(e){
-e.preventDefault();
-cutLongPress = false;
+  e.preventDefault();
+  cutLong = false;
 
-cutTimer = setTimeout(()=>{
-if(tokens.length > 0){
-tokens = [];
-percentBase = null;
-updateLive();
-if(navigator.vibrate) navigator.vibrate(25);
-}
-cutLongPress = true;
-}, 450);
+  cutTimer = setTimeout(()=>{
+    if(tokens.length){
+      tokens = [];
+      updateLive();
+      navigator.vibrate && navigator.vibrate(25);
+    }
+    cutLong = true;
+  },450);
 }
 
 function cutPressEnd(e){
-e.preventDefault();
-clearTimeout(cutTimer);
-
-if(!cutLongPress){
-let ok = back();
-if(ok && navigator.vibrate) navigator.vibrate(15);
-}
+  e.preventDefault();
+  clearTimeout(cutTimer);
+  if(!cutLong && back()) navigator.vibrate && navigator.vibrate(15);
 }
 
 function cutPressCancel(){
-clearTimeout(cutTimer);
+  clearTimeout(cutTimer);
 }
 
-/* ================= SWIPE TO DELETE ================= */
+/* ================= SWIPE DELETE ================= */
 function enableSwipe(row){
-let startX = 0, dx = 0, dragging = false;
+  let sx=0, dx=0, drag=false;
 
-row.addEventListener("pointerdown", e=>{
-startX = e.clientX;
-dragging = true;
-row.classList.add("swiping");
-row.style.transition = "none";
-});
+  row.addEventListener("pointerdown", e=>{
+    sx = e.clientX;
+    drag = true;
+    row.classList.add("swiping");
+    row.style.transition = "none";
+  });
 
-row.addEventListener("pointermove", e=>{
-if(!dragging) return;
-dx = e.clientX - startX;
-if(dx < 0) row.style.transform = translateX(${dx}px);
-});
+  row.addEventListener("pointermove", e=>{
+    if(!drag) return;
+    dx = e.clientX - sx;
+    if(dx < 0) row.style.transform = `translateX(${dx}px)`;
+  });
 
-row.addEventListener("pointerup", ()=>{
-dragging = false;
-row.style.transition = "transform .25s ease";
+  row.addEventListener("pointerup", ()=>{
+    drag = false;
+    row.style.transition = "transform .25s ease";
 
-if(Math.abs(dx) > row.offsetWidth * 0.35){  
-  row.style.transform = "translateX(-100%)";  
-  setTimeout(()=>{  
-    row.remove();  
-    recalculateGrandTotal();  
-    if(navigator.vibrate) navigator.vibrate(20);  
-  },200);  
-}else{  
-  row.style.transform = "translateX(0)";  
-  row.classList.remove("swiping");  
-}  
-dx = 0;
+    if(Math.abs(dx) > row.offsetWidth * 0.35){
+      row.style.transform = "translateX(-100%)";
+      setTimeout(()=>{
+        row.remove();
+        recalculateGrandTotal();
+        navigator.vibrate && navigator.vibrate(20);
+      },200);
+    }else{
+      row.style.transform = "translateX(0)";
+      row.classList.remove("swiping");
+    }
+    dx = 0;
+  });
 
-});
-
-row.addEventListener("pointercancel", ()=>{
-dragging = false;
-row.style.transform = "translateX(0)";
-row.classList.remove("swiping");
-});
+  row.addEventListener("pointercancel", ()=>{
+    drag = false;
+    row.style.transform = "translateX(0)";
+    row.classList.remove("swiping");
+  });
 }
 
 /* INIT */
