@@ -14,6 +14,10 @@ function tap(fn){
 }
 
 /* ================= HELPERS ================= */
+function clean(n){
+  return Number(n); // NO rounding here
+}
+
 function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{
     historyEl.scrollTop = historyEl.scrollHeight;
@@ -35,20 +39,47 @@ function formatIN(str){
   return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
-/* ================= DISPLAY SAFE ================= */
-function displayNumber(n){
+/* ================= DISPLAY FORMATTERS ================= */
+// History / capsule (E allowed)
+function displayResult(n){
   if(!isFinite(n)) return "Error";
 
   if(Math.abs(n) < 1e-9 && n !== 0){
-    return n.toExponential(2);   // 5.00e-11
+    return n.toExponential(2);
   }
 
   return formatIN(n.toString());
 }
 
+// Grand total (NO E allowed)
+function displayTotal(n){
+  if(!isFinite(n)) return "Error";
+
+  let str = n.toString();
+  if(str.includes("e")){
+    str = n.toFixed(12).replace(/\.?0+$/,"");
+  }
+
+  return formatIN(str);
+}
+
+/* ================= GRAND TOTAL (SAFE) ================= */
+function recalculateGrandTotal(){
+  let sum = 0;
+  document.querySelectorAll(".h-row").forEach(row=>{
+    let v = Number(row.dataset.value);
+    if(!isNaN(v)) sum += v;
+  });
+
+  sum = clean(sum);
+  totalEl.innerText = displayTotal(sum);
+  sum < 0 ? totalEl.classList.add("negative")
+          : totalEl.classList.remove("negative");
+}
+
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(typeof t === "object") return t.text;
+  if(typeof t === "object") return t.text;       // percent
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
@@ -157,19 +188,6 @@ function evaluate(){
   return Function("return " + exp)();
 }
 
-/* ================= GRAND TOTAL ================= */
-function recalculateGrandTotal(){
-  let sum = 0;
-  document.querySelectorAll(".h-row").forEach(row=>{
-    let v = Number(row.dataset.value);
-    if(!isNaN(v)) sum += v;
-  });
-
-  totalEl.innerText = displayNumber(sum);
-  sum < 0 ? totalEl.classList.add("negative")
-          : totalEl.classList.remove("negative");
-}
-
 /* ================= ENTER ================= */
 function enter(){
   if(tokens.length === 0) return false;
@@ -185,7 +203,7 @@ function enter(){
     <span class="h-exp">
       ${tokens.map(formatTokenForDisplay).join(" ")} =
     </span>
-    <span class="h-res">${displayNumber(result)}</span>
+    <span class="h-res">${displayResult(result)}</span>
   `;
 
   if(result < 0) row.querySelector(".h-res").classList.add("negative");
@@ -210,7 +228,8 @@ function back(){
 
   if(typeof last === "object"){
     tokens.pop();
-    updateLive(); return true;
+    updateLive();
+    return true;
   }
 
   if(["+","-","×","÷"].includes(last)){
@@ -225,7 +244,7 @@ function back(){
   return true;
 }
 
-/* ================= CLEAR ================= */
+/* ================= CLEAR ALL ================= */
 function clearAll(){
   if(tokens.length === 0 && historyEl.innerHTML === "") return false;
 
@@ -270,7 +289,7 @@ function cutPressCancel(){
   clearTimeout(cutTimer);
 }
 
-/* ================= SWIPE DELETE ================= */
+/* ================= SWIPE TO DELETE ================= */
 function enableSwipe(row){
   let startX = 0, dx = 0, dragging = false;
 
