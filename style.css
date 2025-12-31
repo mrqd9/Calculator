@@ -40,16 +40,16 @@ html,body{
   display:flex;
   flex-direction:column;
   gap:2px;
-  padding-right:8px;
+  padding-right:2px;
   scrollbar-gutter: stable;
 }
 
 .history::-webkit-scrollbar{
-  width:6px;
+  width:4px;
 }
 .history::-webkit-scrollbar-thumb{
   background:rgba(0,0,0,.25);
-  border-radius:6px;
+  border-radius:4px;
 }
 .history::-webkit-scrollbar-track{
   background:transparent;
