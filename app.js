@@ -15,7 +15,7 @@ function tap(fn){
 
 /* ================= HELPERS ================= */
 function clean(n){
-  return Number(n); // no rounding here
+  return Number(n);
 }
 
 function scrollHistoryToBottom(){
@@ -40,29 +40,19 @@ function formatIN(str){
 }
 
 /* ================= DISPLAY FORMATTERS ================= */
-// History / subtotal (E allowed)
 function displayResult(n){
   if(!isFinite(n)) return "Error";
-
   const str = n.toString();
-
-  // If JS already switched to exponential → show it
-  if(str.includes("e")){
-    return n.toExponential(2);
-  }
-
+  if(str.includes("e")) return n.toExponential(2);
   return formatIN(str);
 }
 
-// Grand total (NO exponential)
 function displayTotal(n){
   if(!isFinite(n)) return "Error";
-
   let str = n.toString();
   if(str.includes("e")){
     str = n.toFixed(12).replace(/\.?0+$/,"");
   }
-
   return formatIN(str);
 }
 
@@ -82,7 +72,7 @@ function recalculateGrandTotal(){
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(typeof t === "object") return t.text; // percent
+  if(typeof t === "object") return t.text;
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
@@ -98,6 +88,8 @@ function updateLive(){
 
 /* ================= DIGIT ================= */
 function digit(d){
+  percentBase = null; // 🔥 RESET percent on manual typing
+
   let last = tokens[tokens.length - 1];
 
   if(tokens.length === 0){
@@ -127,6 +119,8 @@ function digit(d){
 
 /* ================= OPERATOR ================= */
 function setOp(op){
+  percentBase = null; // 🔥 RESET percent when operator changes
+
   if(tokens.length === 0){
     if(op === "-"){ tokens.push("-"); updateLive(); return true; }
     return false;
@@ -226,6 +220,8 @@ function enter(){
 /* ================= BACKSPACE ================= */
 function back(){
   if(tokens.length === 0) return false;
+
+  percentBase = null; // 🔥 RESET percent on backspace
 
   let last = tokens[tokens.length - 1];
 
