@@ -15,7 +15,7 @@ function tap(fn){
 
 /* ================= HELPERS ================= */
 function clean(n){
-  return Number(n); // NO rounding here
+  return Number(n); // no rounding here
 }
 
 function scrollHistoryToBottom(){
@@ -40,18 +40,21 @@ function formatIN(str){
 }
 
 /* ================= DISPLAY FORMATTERS ================= */
-// History / capsule (E allowed)
+// History / subtotal (E allowed)
 function displayResult(n){
   if(!isFinite(n)) return "Error";
 
-  if(Math.abs(n) < 1e-9 && n !== 0){
+  const str = n.toString();
+
+  // If JS already switched to exponential → show it
+  if(str.includes("e")){
     return n.toExponential(2);
   }
 
-  return formatIN(n.toString());
+  return formatIN(str);
 }
 
-// Grand total (NO E allowed)
+// Grand total (NO exponential)
 function displayTotal(n){
   if(!isFinite(n)) return "Error";
 
@@ -63,7 +66,7 @@ function displayTotal(n){
   return formatIN(str);
 }
 
-/* ================= GRAND TOTAL (SAFE) ================= */
+/* ================= GRAND TOTAL ================= */
 function recalculateGrandTotal(){
   let sum = 0;
   document.querySelectorAll(".h-row").forEach(row=>{
@@ -79,7 +82,7 @@ function recalculateGrandTotal(){
 
 /* ================= TOKEN DISPLAY ================= */
 function formatTokenForDisplay(t){
-  if(typeof t === "object") return t.text;       // percent
+  if(typeof t === "object") return t.text; // percent
   if(/^-\d/.test(t)) return "- " + formatIN(t.slice(1));
   if(/^\d/.test(t)) return formatIN(t);
   return t;
