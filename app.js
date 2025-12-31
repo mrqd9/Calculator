@@ -24,8 +24,8 @@ function scrollHistoryToBottom(){
 /* ================= GRAND TOTAL ================= */
 function recalculateGrandTotal(){
   let sum = 0;
-  document.querySelectorAll(".h-row").forEach(r=>{
-    let v = Number(r.dataset.value);
+  document.querySelectorAll(".h-row").forEach(row=>{
+    let v = Number(row.dataset.value);
     if(!isNaN(v)) sum += v;
   });
 
@@ -45,7 +45,7 @@ function formatIN(str){
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
-  return (rest ? rest + "," : "") + last3 + (d ? "." + d : "");
+  return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
 function formatTokenForDisplay(t){
@@ -109,26 +109,36 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* ================= % (BILLING STYLE CHAINING) ================= */
+/* ================= % (CORRECT COMPOUNDING) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
   let last = tokens.at(-1);
-  if(typeof last === "object") return false;
-  if(isNaN(last)) return false;
+  let op   = tokens.at(-2);
 
-  let base;
-  try{
-    base = evaluate();        // running subtotal
-  }catch{
-    base = Number(last);
+  if(typeof last === "object" || isNaN(last)) return false;
+
+  // calculate running subtotal WITHOUT future %
+  let base = Number(tokens[0]);
+
+  for(let i = 1; i < tokens.length - 1; i += 2){
+    let operator = tokens[i];
+    let valToken = tokens[i+1];
+    let value = Number(
+      typeof valToken === "object" ? valToken.value : valToken
+    );
+
+    if(operator === "+") base += value;
+    if(operator === "-") base -= value;
+    if(operator === "×") base *= value;
+    if(operator === "÷") base /= value;
   }
 
-  let value = clean(base * Number(last) / 100);
+  let percentValue = clean(base * Number(last) / 100);
 
   tokens[tokens.length - 1] = {
     text: formatIN(last) + "%",
-    value: value
+    value: percentValue
   };
 
   updateLive();
