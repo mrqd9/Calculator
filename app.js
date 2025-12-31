@@ -26,8 +26,9 @@ function formatIN(n){
   if(n === "" || n === "-") return n;
   let str = String(n);
 
-  let [i,d] = str.split(".");
-  i = i.replace(/\D/g,"");
+  let parts = str.split(".");
+  let i = parts[0].replace(/\D/g,"");
+  let d = parts[1];
 
   let last3 = i.slice(-3);
   let rest  = i.slice(0,-3);
@@ -66,7 +67,7 @@ function recalcTotal(){
 
 /* ================= INPUT ================= */
 function digit(d){
-  const last = tokens.at(-1);
+  const last = tokens[tokens.length - 1];
 
   if(!tokens.length){
     tokens.push(d === "." ? "0." : d);
@@ -102,7 +103,7 @@ function setOp(op){
     return false;
   }
 
-  const last = tokens.at(-1);
+  const last = tokens[tokens.length - 1];
   if(last === "-" && tokens.length === 1) return false;
 
   OPS.includes(last)
@@ -116,15 +117,15 @@ function setOp(op){
 function applyPercent(){
   if(tokens.length < 2) return false;
 
-  const last = tokens.at(-1);
-  const op   = tokens.at(-2);
+  const last = tokens[tokens.length - 1];
+  const op   = tokens[tokens.length - 2];
   if(isNaN(last)) return false;
 
   const B = Number(last);
   const base =
     percentBase ??
-    (tokens.length >= 3 && !isNaN(tokens.at(-3))
-      ? Number(tokens.at(-3))
+    (tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
+      ? Number(tokens[tokens.length - 3])
       : null);
 
   if(base === null) return false;
@@ -138,11 +139,7 @@ function applyPercent(){
     percentBase = base;
   }
 
-  tokens[tokens.length - 1] = {
-    text: B + "%",
-    value
-  };
-
+  tokens[tokens.length - 1] = { text: B + "%", value };
   return commit();
 }
 
@@ -162,8 +159,7 @@ function enter(){
   if(!tokens.length) return false;
 
   let result;
-  try{ result = evaluate(); }
-  catch{ return false; }
+  try{ result = evaluate(); }catch{ return false; }
 
   const row = document.createElement("div");
   row.className = "h-row";
@@ -181,7 +177,6 @@ function enter(){
 
   tokens = [];
   percentBase = null;
-
   updateLive();
   recalcTotal();
   historyEl.scrollTop = historyEl.scrollHeight;
@@ -192,7 +187,7 @@ function enter(){
 function back(){
   if(!tokens.length) return false;
 
-  const last = tokens.at(-1);
+  const last = tokens[tokens.length - 1];
 
   if(typeof last === "object" || OPS.includes(last)){
     tokens.pop();
