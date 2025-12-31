@@ -17,13 +17,6 @@ function tap(fn){
   }
 }
 
-/* ================= HELPERS ================= */
-function scrollHistoryToBottom(){
-  requestAnimationFrame(()=>{
-    historyEl.scrollTop = historyEl.scrollHeight;
-  });
-}
-
 /* ================= FORMAT ================= */
 function formatIN(str){
   if(str === "" || str === "-") return str;
@@ -39,7 +32,6 @@ function formatIN(str){
   return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
-/* ================= DISPLAY ================= */
 function displayResult(n){
   if(!isFinite(n)) return "Error";
   let s = n.toString();
@@ -148,7 +140,7 @@ function applyPercent(){
   updateLive();
 }
 
-/* ================= EVALUATE (math.js) ================= */
+/* ================= EVAL ================= */
 function evaluate(){
   const exp = tokens.map(t =>
     typeof t === "object" ? t.value : t
@@ -160,7 +152,7 @@ function evaluate(){
 }
 
 /* ================= ENTER ================= */
-function enter(){
+function doEnter(){
   if(!tokens.length) return;
 
   let result;
@@ -189,7 +181,7 @@ function enter(){
   updateLive();
 
   recalcTotal();
-  scrollHistoryToBottom();
+  historyEl.scrollTop = historyEl.scrollHeight;
 }
 
 /* ================= TOTAL ================= */
