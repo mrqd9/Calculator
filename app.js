@@ -1,6 +1,6 @@
 let historyEl = document.getElementById("history");
-let liveEl    = document.getElementById("live");
-let totalEl   = document.getElementById("total");
+let liveEl = document.getElementById("live");
+let totalEl = document.getElementById("total");
 
 let tokens = [];
 
@@ -109,35 +109,35 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* ================= % (CORRECT COMPOUNDING) ================= */
+/* ================= % (TRUE BILLING COMPOUNDING) ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
-  let last = tokens.at(-1);
-  let op   = tokens.at(-2);
+  let percentToken = tokens.at(-1);
+  let operator = tokens.at(-2);
 
-  if(typeof last === "object" || isNaN(last)) return false;
+  if(isNaN(percentToken)) return false;
 
-  // calculate running subtotal WITHOUT future %
-  let base = Number(tokens[0]);
+  // calculate subtotal BEFORE this %
+  let subtotal = Number(tokens[0]);
 
-  for(let i = 1; i < tokens.length - 1; i += 2){
-    let operator = tokens[i];
+  for(let i = 1; i < tokens.length - 2; i += 2){
+    let op = tokens[i];
     let valToken = tokens[i+1];
-    let value = Number(
+    let val = Number(
       typeof valToken === "object" ? valToken.value : valToken
     );
 
-    if(operator === "+") base += value;
-    if(operator === "-") base -= value;
-    if(operator === "×") base *= value;
-    if(operator === "÷") base /= value;
+    if(op === "+") subtotal += val;
+    if(op === "-") subtotal -= val;
+    if(op === "×") subtotal *= val;
+    if(op === "÷") subtotal /= val;
   }
 
-  let percentValue = clean(base * Number(last) / 100);
+  let percentValue = clean(subtotal * Number(percentToken) / 100);
 
   tokens[tokens.length - 1] = {
-    text: formatIN(last) + "%",
+    text: formatIN(percentToken) + "%",
     value: percentValue
   };
 
