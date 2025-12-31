@@ -9,6 +9,31 @@ html,body{
   background:#1f1f1f;
   font-family:system-ui;
 }
+/* Purana CSS rahega, bas ye extra add karein */
+
+.gst-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.gst-btn {
+  height: 40px;
+  font-size: 14px;
+  background: linear-gradient(180deg, #4a90e2, #357abd);
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+}
+
+.gst-btn:active {
+  transform: scale(0.95);
+}
+
+/* AC button ko thoda alag dikhane ke liye */
+.ac {
+  background: linear-gradient(180deg, #ff5f5f, #e04848);
+}
 
 /* APP */
 .calc{
