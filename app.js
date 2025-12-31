@@ -14,28 +14,10 @@ function tap(fn){
 }
 
 /* ================= HELPERS ================= */
-function clean(n){
-  return Number(parseFloat(n).toFixed(10));
-}
-
 function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{
     historyEl.scrollTop = historyEl.scrollHeight;
   });
-}
-
-/* ================= GRAND TOTAL (SAFE) ================= */
-function recalculateGrandTotal(){
-  let sum = 0;
-  document.querySelectorAll(".h-row").forEach(row=>{
-    let v = Number(row.dataset.value);
-    if(!isNaN(v)) sum += v;
-  });
-
-  sum = clean(sum);
-  totalEl.innerText = formatIN(sum.toString());
-  sum < 0 ? totalEl.classList.add("negative")
-          : totalEl.classList.remove("negative");
 }
 
 /* ================= NUMBER FORMAT ================= */
@@ -51,6 +33,17 @@ function formatIN(str){
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
 
   return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
+}
+
+/* ================= DISPLAY SAFE ================= */
+function displayNumber(n){
+  if(!isFinite(n)) return "Error";
+
+  if(Math.abs(n) < 1e-9 && n !== 0){
+    return n.toExponential(2);   // 5.00e-11
+  }
+
+  return formatIN(n.toString());
 }
 
 /* ================= TOKEN DISPLAY ================= */
@@ -71,8 +64,6 @@ function updateLive(){
 
 /* ================= DIGIT ================= */
 function digit(d){
-  percentBase = null; // 🔑 RESET %
-
   let last = tokens[tokens.length - 1];
 
   if(tokens.length === 0){
@@ -102,8 +93,6 @@ function digit(d){
 
 /* ================= OPERATOR ================= */
 function setOp(op){
-  percentBase = null; // 🔑 RESET %
-
   if(tokens.length === 0){
     if(op === "-"){ tokens.push("-"); updateLive(); return true; }
     return false;
@@ -121,7 +110,7 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* ================= PERCENT (SAFE & CORRECT) ================= */
+/* ================= PERCENT ================= */
 function applyPercent(){
   if(tokens.length < 2) return false;
 
@@ -130,13 +119,11 @@ function applyPercent(){
   if(isNaN(last)) return false;
 
   let B = Number(last);
-  let base = null;
-
-  if(percentBase !== null){
-    base = percentBase;
-  }else if(tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])){
-    base = Number(tokens[tokens.length - 3]);
-  }
+  let base =
+    percentBase ??
+    (tokens.length >= 3 && !isNaN(tokens[tokens.length - 3])
+      ? Number(tokens[tokens.length - 3])
+      : null);
 
   if(base === null) return false;
 
@@ -167,7 +154,20 @@ function evaluate(){
     .replace(/×/g,"*")
     .replace(/÷/g,"/");
 
-  return clean(Function("return " + exp)());
+  return Function("return " + exp)();
+}
+
+/* ================= GRAND TOTAL ================= */
+function recalculateGrandTotal(){
+  let sum = 0;
+  document.querySelectorAll(".h-row").forEach(row=>{
+    let v = Number(row.dataset.value);
+    if(!isNaN(v)) sum += v;
+  });
+
+  totalEl.innerText = displayNumber(sum);
+  sum < 0 ? totalEl.classList.add("negative")
+          : totalEl.classList.remove("negative");
 }
 
 /* ================= ENTER ================= */
@@ -182,8 +182,10 @@ function enter(){
   row.dataset.value = result;
 
   row.innerHTML = `
-    <span class="h-exp">${tokens.map(formatTokenForDisplay).join(" ")} =</span>
-    <span class="h-res">${formatIN(result.toString())}</span>
+    <span class="h-exp">
+      ${tokens.map(formatTokenForDisplay).join(" ")} =
+    </span>
+    <span class="h-res">${displayNumber(result)}</span>
   `;
 
   if(result < 0) row.querySelector(".h-res").classList.add("negative");
@@ -202,16 +204,13 @@ function enter(){
 
 /* ================= BACKSPACE ================= */
 function back(){
-  percentBase = null; // 🔑 RESET %
-
   if(tokens.length === 0) return false;
 
   let last = tokens[tokens.length - 1];
 
   if(typeof last === "object"){
     tokens.pop();
-    updateLive();
-    return true;
+    updateLive(); return true;
   }
 
   if(["+","-","×","÷"].includes(last)){
@@ -226,7 +225,7 @@ function back(){
   return true;
 }
 
-/* ================= CLEAR ALL ================= */
+/* ================= CLEAR ================= */
 function clearAll(){
   if(tokens.length === 0 && historyEl.innerHTML === "") return false;
 
@@ -271,7 +270,7 @@ function cutPressCancel(){
   clearTimeout(cutTimer);
 }
 
-/* ================= SWIPE TO DELETE ================= */
+/* ================= SWIPE DELETE ================= */
 function enableSwipe(row){
   let startX = 0, dx = 0, dragging = false;
 
