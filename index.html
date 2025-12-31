@@ -61,7 +61,7 @@ html,body{
   padding-right:6px;
 }
 
-/* CAPSULE ROW */
+/* CAPSULE */
 .h-row{
   position:relative;
   display:grid;
@@ -75,7 +75,7 @@ html,body{
   overflow:hidden;
 }
 
-/* DELETE BACKGROUND */
+/* DELETE BG */
 .h-row::before{
   content:"← Delete";
   position:absolute;
@@ -115,7 +115,7 @@ html,body{
   margin:6px 0;
 }
 
-/* LIVE INPUT */
+/* LIVE */
 .live{
   min-height:28px;
   text-align:center;
@@ -124,7 +124,7 @@ html,body{
   word-wrap:break-word;
 }
 
-/* GRAND TOTAL */
+/* TOTAL */
 .total{
   min-height:40px;
   text-align:right;
@@ -198,22 +198,16 @@ button:active{
 
 <div class="calc">
 
-  <!-- DISPLAY -->
   <div class="display">
     <div id="history" class="history"></div>
-
     <div class="separator"></div>
-
     <div id="live" class="live"></div>
-
     <div class="separator"></div>
-
     <div id="total" class="total">0</div>
   </div>
 
-  <!-- KEYS -->
   <div class="keys">
-    <button class="ac" onclick="tap(clearAll)">AC</button>
+    <button class="ac" onclick="clearAll()">AC</button>
 
     <button class="op"
       onmousedown="cutPressStart(event)"
@@ -223,32 +217,31 @@ button:active{
       ontouchend="cutPressEnd(event)"
       ontouchcancel="cutPressCancel()">⌫</button>
 
-    <button class="op" onclick="tap(applyPercent)">%</button>
-    <button class="op" onclick="tap(()=>setOp('÷'))">÷</button>
+    <button class="op" onclick="applyPercent()">%</button>
+    <button class="op" onclick="setOp('÷')">÷</button>
 
-    <button class="num" onclick="tap(()=>digit('7'))">7</button>
-    <button class="num" onclick="tap(()=>digit('8'))">8</button>
-    <button class="num" onclick="tap(()=>digit('9'))">9</button>
-    <button class="op" onclick="tap(()=>setOp('+'))">+</button>
+    <button class="num" onclick="digit('7')">7</button>
+    <button class="num" onclick="digit('8')">8</button>
+    <button class="num" onclick="digit('9')">9</button>
+    <button class="op" onclick="setOp('+')">+</button>
 
-    <button class="num" onclick="tap(()=>digit('4'))">4</button>
-    <button class="num" onclick="tap(()=>digit('5'))">5</button>
-    <button class="num" onclick="tap(()=>digit('6'))">6</button>
-    <button class="op" onclick="tap(()=>setOp('-'))">−</button>
+    <button class="num" onclick="digit('4')">4</button>
+    <button class="num" onclick="digit('5')">5</button>
+    <button class="num" onclick="digit('6')">6</button>
+    <button class="op" onclick="setOp('-')">−</button>
 
-    <button class="num" onclick="tap(()=>digit('1'))">1</button>
-    <button class="num" onclick="tap(()=>digit('2'))">2</button>
-    <button class="num" onclick="tap(()=>digit('3'))">3</button>
-    <button class="op" onclick="tap(()=>setOp('×'))">×</button>
+    <button class="num" onclick="digit('1')">1</button>
+    <button class="num" onclick="digit('2')">2</button>
+    <button class="num" onclick="digit('3')">3</button>
+    <button class="op" onclick="setOp('×')">×</button>
 
-    <button class="num" onclick="tap(()=>digit('.'))">.</button>
-    <button class="num" onclick="tap(()=>digit('0'))">0</button>
-    <button class="eq" onclick="tap(enter)">⏎ =</button>
+    <button class="num" onclick="digit('.')">.</button>
+    <button class="num" onclick="digit('0')">0</button>
+    <button class="eq" onclick="enter()">⏎ =</button>
   </div>
 
 </div>
 
-<!-- YOUR APP LOGIC -->
 <script src="app.js"></script>
 
 </body>
