@@ -6,12 +6,10 @@ let tokens = [];
 function pulse() { if (navigator.vibrate) navigator.vibrate(30); }
 function tap(fn){ let ok = fn(); if(ok) pulse(); }
 
-/* SMART CLEANER: Handles floating point and E-notation */
 function clean(n){
   if (isNaN(n)) return 0;
   let val = Math.round((n + Number.EPSILON) * 1e12) / 1e12;
-  // If number is too large for the UI, use scientific notation
-  if (Math.abs(val) > 1e14) return val.toExponential(4);
+  if (Math.abs(val) > 1e13) return val.toExponential(4);
   return val;
 }
 
@@ -20,6 +18,7 @@ function scrollHistoryToBottom(){
 }
 
 function saveToLocal() { localStorage.setItem("billing_calc_history", historyEl.innerHTML); }
+
 function loadFromLocal() {
   const saved = localStorage.getItem("billing_calc_history");
   if(saved) {
@@ -35,28 +34,20 @@ function recalculateGrandTotal(){
     let v = Number(row.dataset.value);
     if(!isNaN(v)) sum += v;
   });
-  let cleanSum = clean(sum);
-  totalEl.innerText = formatIN(cleanSum.toString());
+  totalEl.innerText = formatIN(clean(sum).toString());
   totalEl.classList.toggle("negative", sum < 0);
   saveToLocal();
 }
 
-/* FORMATTER: Adds commas and handles E-notation */
 function formatIN(str){
-  if(str === "" || str === "-" ) return str;
-  if(str.includes('e')) return str; // Keep E-notation as is
-
+  if(str === "" || str === "-" || str.includes('e')) return str;
   let [i,d] = String(str).split(".");
   let sign = i.startsWith("-") ? "-" : "";
   i = i.replace(/\D/g,"");
-
-  // If integer part is too long, force it to exponential for UI safety
-  if (i.length > 14) return Number(str).toExponential(4);
-
+  if (i.length > 13) return Number(str).toExponential(4);
   let last3 = i.slice(-3);
   let rest  = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
-
   return sign + (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
@@ -79,10 +70,7 @@ function digit(d){
   if(last === "-" && tokens.length === 1){ tokens[0] = d === "." ? "-0." : "-" + d; updateLive(); return true; }
   if(["+","-","×","÷"].includes(last)){ tokens.push(d === "." ? "0." : d); updateLive(); return true; }
   if(d === "." && last.includes(".")) return false;
-  
-  let pure = last.replace("-","").replace(".","");
-  if(d !== "." && pure.length >= 15) return false;
-
+  if(last.replace(/[^0-9]/g,"").length >= 15) return false;
   tokens[tokens.length - 1] += d;
   updateLive(); return true;
 }
@@ -99,22 +87,18 @@ function applyPercent(){
   if(tokens.length < 1) return false;
   let last = tokens.at(-1);
   if(isNaN(last) || typeof last === "object") return false;
-
   let val = Number(last);
   let operator = tokens.at(-2);
   let subtotal = Number(tokens[0]);
-  
   for(let i = 1; i < tokens.length - 2; i += 2){
     let op = tokens[i], t = tokens[i+1];
     let v = Number(typeof t === "object" ? t.value : t);
     if(op === "+") subtotal += v; if(op === "-") subtotal -= v;
     if(op === "×") subtotal *= v; if(op === "÷") subtotal /= v;
   }
-
   let finalPercentVal = (operator === "+" || operator === "-") 
     ? clean(Math.abs(subtotal) * val / 100) 
     : clean(val / 100);
-
   tokens[tokens.length - 1] = { text: formatIN(last) + "%", value: finalPercentVal };
   updateLive(); return true;
 }
@@ -131,11 +115,8 @@ function enter(){
   let row = document.createElement("div");
   row.className = "h-row";
   row.dataset.value = result;
-  
-  let expText = tokens.map(formatTokenForDisplay).join(" ");
-  row.innerHTML = `<span class="h-exp">${expText} =</span>
+  row.innerHTML = `<span class="h-exp">${tokens.map(formatTokenForDisplay).join(" ")} =</span>
                    <span class="h-res">${formatIN(result.toString())}</span>`;
-  
   if(result < 0) row.querySelector(".h-res").classList.add("negative");
   enableSwipe(row);
   historyEl.appendChild(row);
@@ -165,16 +146,36 @@ function cutPressStart(e){
 }
 function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) pulse(); }
 
+/* IMPROVED SWIPE LOGIC (No sticking) */
 function enableSwipe(row){
-  let sx=0, dx=0, drag=false;
-  row.addEventListener("pointerdown", e=>{ sx = e.clientX; drag = true; row.classList.add("swiping"); row.style.transition = "none"; });
-  row.addEventListener("pointermove", e=>{ if(!drag) return; dx = e.clientX - sx; if(dx < 0) row.style.transform = `translateX(${dx}px)`; });
-  row.addEventListener("pointerup", ()=>{
-    drag = false; row.style.transition = "transform .2s ease";
-    if(dx < -(row.offsetWidth * 0.35)){
-      row.style.transform = "translateX(-100%)"; pulse();
-      setTimeout(()=>{ row.remove(); recalculateGrandTotal(); },200);
-    }else{ row.style.transform = "translateX(0)"; setTimeout(() => row.classList.remove("swiping"), 200); }
+  let sx=0, dx=0, dragging=false;
+
+  row.addEventListener("touchstart", e => {
+    sx = e.touches[0].clientX;
+    dragging = true;
+    row.style.transition = "none";
+  }, {passive: true});
+
+  row.addEventListener("touchmove", e => {
+    if(!dragging) return;
+    dx = e.touches[0].clientX - sx;
+    if(dx < 0) {
+      row.classList.add("swiping");
+      row.style.transform = `translateX(${dx}px)`;
+    }
+  }, {passive: true});
+
+  row.addEventListener("touchend", () => {
+    dragging = false;
+    row.style.transition = "transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)";
+    if(dx < -(row.offsetWidth * 0.4)){
+      row.style.transform = "translateX(-110%)";
+      pulse();
+      setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 200);
+    } else {
+      row.style.transform = "translateX(0)";
+      setTimeout(()=> row.classList.remove("swiping"), 200);
+    }
     dx = 0;
   });
 }
