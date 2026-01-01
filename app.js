@@ -19,6 +19,15 @@ function scrollHistoryToBottom(){
 
 function saveToLocal() { localStorage.setItem("billing_calc_history", historyEl.innerHTML); }
 
+function getGrandSum() {
+  let sum = 0;
+  document.querySelectorAll(".h-row").forEach(row => {
+    let v = Number(row.dataset.value);
+    if(!isNaN(v)) sum += v;
+  });
+  return clean(sum);
+}
+
 function loadFromLocal() {
   const saved = localStorage.getItem("billing_calc_history");
   if(saved) {
@@ -29,12 +38,8 @@ function loadFromLocal() {
 }
 
 function recalculateGrandTotal(){
-  let sum = 0;
-  document.querySelectorAll(".h-row").forEach(row=>{
-    let v = Number(row.dataset.value);
-    if(!isNaN(v)) sum += v;
-  });
-  totalEl.innerText = formatIN(clean(sum).toString());
+  let sum = getGrandSum();
+  totalEl.innerText = formatIN(sum.toString());
   totalEl.classList.toggle("negative", sum < 0);
   saveToLocal();
 }
@@ -58,11 +63,9 @@ function formatTokenForDisplay(t){
   return t;
 }
 
-/* Updated Live for expansion and auto-scroll */
 function updateLive(){
   let text = tokens.map(formatTokenForDisplay).join(" ");
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>` : `<span class="caret"></span>`;
-  // Auto-scroll within live area if it grows
   liveEl.scrollTop = liveEl.scrollHeight;
 }
 
@@ -86,11 +89,25 @@ function setOp(op){
   updateLive(); return true;
 }
 
+/* SMART PERCENT: Adds multiplier automatically if single number */
 function applyPercent(){
   if(tokens.length < 1) return false;
   let last = tokens.at(-1);
   if(isNaN(last) || typeof last === "object") return false;
   let val = Number(last);
+
+  // Direct Discount Logic
+  if (tokens.length === 1) {
+    let gSum = getGrandSum();
+    if (gSum !== 0) {
+      // Set visual as Percent, then push multiplier
+      tokens[0] = { text: formatIN(last) + "%", value: clean(val / 100) };
+      tokens.push("×");
+      tokens.push(Math.abs(gSum).toString());
+      updateLive(); return true;
+    }
+  }
+
   let operator = tokens.at(-2);
   let subtotal = Number(tokens[0]);
   for(let i = 1; i < tokens.length - 2; i += 2){
@@ -127,12 +144,21 @@ function enter(){
   return true;
 }
 
+/* SMART BACKSPACE: Removes automatic multiplication in one go */
 function back(){
   if(!tokens.length) return false;
-  let last = tokens.at(-1);
-  if(typeof last === "object" || ["+","-","×","÷"].includes(last)){ tokens.pop(); }
-  else if(last.length > 1){ tokens[tokens.length - 1] = last.slice(0,-1); }
-  else { tokens.pop(); }
+  
+  // Logic: If last token is numeric and second-last is '×' and third-last is % object, pop twice
+  if(tokens.length >= 3 && tokens.at(-2) === "×" && typeof tokens.at(-3) === "object" && tokens.at(-3).text.includes("%")){
+    tokens.pop(); // Pop number
+    tokens.pop(); // Pop multiplier
+  } else {
+    let last = tokens.at(-1);
+    if(typeof last === "object" || ["+","-","×","÷"].includes(last)){ tokens.pop(); }
+    else if(last.length > 1){ tokens[tokens.length - 1] = last.slice(0,-1); }
+    else { tokens.pop(); }
+  }
+  
   updateLive(); return true;
 }
 
@@ -149,8 +175,25 @@ function cutPressStart(e){
 }
 function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) pulse(); }
 
+function toggleRow(row) {
+  if (row.classList.contains("swiping")) return;
+  const isExpanded = row.classList.contains("expanded");
+  document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded"));
+  if (!isExpanded) {
+    row.classList.add("expanded");
+    pulse();
+  }
+}
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".h-row")) {
+    document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded"));
+  }
+});
+
 function enableSwipe(row){
   let sx=0, dx=0, dragging=false;
+  row.onclick = () => toggleRow(row);
   row.addEventListener("touchstart", e => {
     sx = e.touches[0].clientX;
     dragging = true;
