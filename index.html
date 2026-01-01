@@ -3,11 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#121212">
+<meta name="theme-color" content="#1f1f1f">
+<meta name="msapplication-navbutton-color" content="#1f1f1f">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
-<title>Billing Calculator Pro</title>
-</head>
+<title>Adding Calculator Pro</title>
+</head> 
 <body>
 <div class="calc">
   <div class="action-bar">
@@ -59,5 +63,14 @@
   </div>
 </div>
 <script src="app.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then(reg => console.log("Service Worker Registered!"))
+      .catch(err => console.log("Service Worker Registration Failed:", err));
+  });
+}
+ </script>
 </body>
 </html>
