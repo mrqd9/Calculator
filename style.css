@@ -87,10 +87,9 @@ html,body{
   font-weight:700;
   opacity:0;
   transition:opacity .1s ease;
-  z-index:5; /* Numbers ke upar */
+  z-index:5;
 }
 
-/* Jab swipe ho raha ho tab layer dikhe */
 .h-row.swiping::before{
   opacity:1;
 }
