@@ -3,11 +3,11 @@ let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 let tokens = [];
 
-/* ================= VIBRATION ================= */
+/* ================= tactile vibration ================= */
 function pulse() { if (navigator.vibrate) navigator.vibrate(30); }
 function tap(fn){ let ok = fn(); if(ok) pulse(); }
 
-/* ================= HELPERS ================= */
+/* ================= helpers ================= */
 function clean(n){
   if (isNaN(n)) return 0;
   return Math.round((n + Number.EPSILON) * 1e12) / 1e12;
@@ -17,10 +17,8 @@ function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{ historyEl.scrollTop = historyEl.scrollHeight; });
 }
 
-function saveToLocal() {
-  localStorage.setItem("billing_calc_history", historyEl.innerHTML);
-}
-
+/* ================= storage ================= */
+function saveToLocal() { localStorage.setItem("billing_calc_history", historyEl.innerHTML); }
 function loadFromLocal() {
   const saved = localStorage.getItem("billing_calc_history");
   if(saved) {
@@ -42,6 +40,7 @@ function recalculateGrandTotal(){
   saveToLocal();
 }
 
+/* ================= formatting ================= */
 function formatIN(str){
   if(str === "" || str === "-" || str.includes('e')) return str;
   let [i,d] = String(str).split(".");
@@ -65,13 +64,14 @@ function updateLive(){
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>` : `<span class="caret"></span>`;
 }
 
-/* ================= ACTIONS ================= */
+/* ================= logic ================= */
 function digit(d){
   let last = tokens.at(-1);
+  // Auto-multiply if number follows a % object
+  if(typeof last === "object") { tokens.push("×"); tokens.push(d === "." ? "0." : d); updateLive(); return true; }
   if(!tokens.length){ tokens.push(d === "." ? "0." : d); updateLive(); return true; }
   if(last === "-" && tokens.length === 1){ tokens[0] = d === "." ? "-0." : "-" + d; updateLive(); return true; }
   if(["+","-","×","÷"].includes(last)){ tokens.push(d === "." ? "0." : d); updateLive(); return true; }
-  if(typeof last === "object") return false;
   if(d === "." && last.includes(".")) return false;
   let pure = last.replace("-","").replace(".","");
   if(d !== "." && pure.length >= 15) return false;
@@ -87,35 +87,37 @@ function setOp(op){
   updateLive(); return true;
 }
 
-/* SMART PERCENT LOGIC */
 function applyPercent(){
-  if(tokens.length < 2) return false;
-  let percentToken = tokens.at(-1);
-  let operator = tokens.at(-2);
-  if(isNaN(percentToken)) return false;
+  if(tokens.length < 1) return false;
+  let last = tokens.at(-1);
+  if(isNaN(last) || typeof last === "object") return false;
 
+  let val = Number(last);
+  let operator = tokens.at(-2);
   let subtotal = Number(tokens[0]);
+  
+  // Calculate subtotal for context
   for(let i = 1; i < tokens.length - 2; i += 2){
-    let op = tokens[i], valToken = tokens[i+1];
-    let val = Number(typeof valToken === "object" ? valToken.value : valToken);
-    if(op === "+") subtotal += val; if(op === "-") subtotal -= val;
-    if(op === "×") subtotal *= val; if(op === "÷") subtotal /= val;
+    let op = tokens[i], t = tokens[i+1];
+    let v = Number(typeof t === "object" ? t.value : t);
+    if(op === "+") subtotal += v; if(op === "-") subtotal -= v;
+    if(op === "×") subtotal *= v; if(op === "÷") subtotal /= v;
   }
 
-  let finalValue;
-  if(operator === "×" || operator === "÷") {
-    // Pure Math: -100 * 20% = -20
-    finalValue = clean(Number(percentToken) / 100);
+  let finalPercentVal;
+  // Use billing logic only for + and -
+  if(operator === "+" || operator === "-") {
+    finalPercentVal = clean(Math.abs(subtotal) * val / 100);
   } else {
-    // Billing Style: -100 + 20% = -80
-    finalValue = clean(Math.abs(subtotal) * Number(percentToken) / 100);
+    // Math logic for everything else (e.g., -100% 20)
+    finalPercentVal = clean(val / 100);
   }
 
   tokens[tokens.length - 1] = {
-    text: formatIN(percentToken) + "%",
-    value: finalValue
+    text: formatIN(last) + "%",
+    value: finalPercentVal
   };
-
+  
   updateLive();
   return true;
 }
@@ -156,14 +158,13 @@ function clearAll(){
   return true;
 }
 
-/* ================= CONTROLS ================= */
+/* ================= touch ================= */
 let cutTimer = null, cutLong = false;
 function cutPressStart(e){ 
   e.preventDefault(); cutLong = false; 
   cutTimer = setTimeout(()=>{ if(tokens.length){ tokens = []; updateLive(); pulse(); } cutLong = true; },450); 
 }
 function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) pulse(); }
-function cutPressCancel(){ clearTimeout(cutTimer); }
 
 function enableSwipe(row){
   let sx=0, dx=0, drag=false;
