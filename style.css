@@ -41,16 +41,15 @@ html,body{
   flex-direction:column;
   gap:4px;
 }
+.history::-webkit-scrollbar{ width:0; }
 
-.history::-webkit-scrollbar{ width:0; } /* Clean look */
-
-/* HISTORY ROW (COMPACT HEIGHT) */
+/* HISTORY ROW (COMPACT & FADE EFFECT) */
 .h-row{
   position:relative;
   display:grid;
   grid-template-columns: 62% auto; 
   align-items: center;
-  padding:6px 14px; /* Reduced padding for compact look */
+  padding:6px 14px;
   min-height: 34px;
   border-radius:12px;
   background: rgba(255,255,255,0.25);
@@ -58,12 +57,12 @@ html,body{
   border: 1px solid rgba(255,255,255,0.1);
   transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
   user-select: none;
-  touch-action: pan-y; /* Only allow vertical scroll on list */
+  touch-action: pan-y;
 }
 
-/* DELETE INDICATOR LAYER */
+/* DELETE INDICATOR */
 .h-row::before{
-  content:"Delete ←"; /* Added Left Symbol */
+  content:"Delete ←";
   position:absolute;
   inset:0;
   background: #d32f2f;
@@ -77,50 +76,54 @@ html,body{
   border-radius: 12px;
   opacity:0;
   z-index: 0;
-  transition: opacity 0.1s ease;
+  transition: opacity 0.15s ease;
 }
 
 .h-row.swiping::before{ opacity:1; }
 
+/* Content Fade logic */
 .h-exp, .h-res {
   position: relative;
   z-index: 1;
-  pointer-events: none; /* Let touch pass through to row */
+  pointer-events: none;
+  transition: opacity 0.15s ease; /* Smooth Fade-out */
 }
 
-.h-exp{
-  text-align: right;
-  padding-right: 10px;
-  font-size: 13px;
-  color: #444;
-  white-space: nowrap;
-  overflow: hidden;
+/* Jab row swipe ho rahi ho, content hide karein */
+.h-row.swiping .h-exp,
+.h-row.swiping .h-res {
+  opacity: 0;
 }
 
-.h-res{
-  text-align: right;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1a1a1a;
-  border-left: 1px solid rgba(0,0,0,0.1);
-  padding-left: 10px;
-  white-space: nowrap;
-}
+.h-exp{ text-align: right; padding-right: 10px; font-size: 13px; color: #444; white-space: nowrap; overflow: hidden; }
+.h-res{ text-align: right; font-size: 16px; font-weight: 700; color: #1a1a1a; border-left: 1px solid rgba(0,0,0,0.1); padding-left: 10px; white-space: nowrap; }
 
 .negative{ color:#c62828 !important; }
-.separator{ height:1px; background: rgba(0,0,0,0.08); margin:8px 0; }
+.separator{ height:1px; background: rgba(0,0,0,0.08); margin:8px 0; flex-shrink: 0; }
 
-.live{ height:30px; text-align:center; font-size:24px; font-weight:600; color:#333; }
-.total{ height:40px; text-align:right; font-size:32px; font-weight:800; color:#000; }
+/* LIVE TYPING (VERTICAL EXPANSION FIX) */
+.live{
+  min-height:30px;
+  max-height: 80px; /* Limits growth to prevent taking over screen */
+  overflow-y: auto;
+  text-align:center;
+  font-size:24px;
+  font-weight:600;
+  color:#333;
+  word-wrap: break-word; /* Allows numbers to jump to next line */
+  line-height: 1.2;
+}
+
+.total{ height:40px; text-align:right; font-size:32px; font-weight:800; color:#000; flex-shrink: 0; }
 
 .caret{
-  display:inline-block; width:2px; height:1.1em; background:#2e7d32;
-  margin-left:3px; vertical-align:-0.15em; animation:blink 1s steps(1) infinite;
+  display:inline-block; width:2px; height:0.9em; background:#2e7d32;
+  margin-left:3px; vertical-align:-0.1em; animation:blink 1s steps(1) infinite;
 }
 @keyframes blink{ 50%{opacity:0;} }
 
-/* KEYPAD (PERFECT STYLE RETAINED) */
-.keys{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+/* KEYPAD */
+.keys{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; flex-shrink: 0; }
 
 button{
   height:60px; border:0; border-radius:18px; font-size:24px; font-weight:600;
@@ -128,15 +131,9 @@ button{
   box-shadow: 0 4px 0 #1a1a1a, 0 8px 15px rgba(0,0,0,0.2);
   transition: all 0.05s;
 }
-
 button:active{ transform: translateY(2px); box-shadow: 0 1px 0 #1a1a1a, 0 4px 8px rgba(0,0,0,0.3); }
 
 .num{ background: #3d3d3d; }
 .op{ background: #4a4a4a; color: #81c784; }
 .ac{ background: #b71c1c; color: #fff; }
 .eq{ grid-column: span 2; background: #2e7d32; color: #fff; }
-
-@media (orientation:landscape){
-  body::before{ content:"Portrait Mode Only"; position:fixed; inset:0; background:#000; color:#fff; display:flex; align-items:center; justify-content:center; z-index:9999; }
-  .calc{display:none;}
-}
