@@ -3,16 +3,9 @@ let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 let tokens = [];
 
-/* ================= VIBRATION ENGINE ================= */
-// "Feelable Lite Strong" vibration (30ms is ideal for tactile feedback)
-function pulse() {
-  if (navigator.vibrate) navigator.vibrate(30);
-}
-
-function tap(fn){
-  let ok = fn();
-  if(ok) pulse(); // Only vibrate if the action actually happened
-}
+/* ================= VIBRATION ================= */
+function pulse() { if (navigator.vibrate) navigator.vibrate(30); }
+function tap(fn){ let ok = fn(); if(ok) pulse(); }
 
 /* ================= HELPERS ================= */
 function clean(n){
@@ -21,12 +14,9 @@ function clean(n){
 }
 
 function scrollHistoryToBottom(){
-  requestAnimationFrame(()=>{
-    historyEl.scrollTop = historyEl.scrollHeight;
-  });
+  requestAnimationFrame(()=>{ historyEl.scrollTop = historyEl.scrollHeight; });
 }
 
-/* ================= STORAGE ================= */
 function saveToLocal() {
   localStorage.setItem("billing_calc_history", historyEl.innerHTML);
 }
@@ -40,7 +30,6 @@ function loadFromLocal() {
   }
 }
 
-/* ================= GRAND TOTAL ================= */
 function recalculateGrandTotal(){
   let sum = 0;
   document.querySelectorAll(".h-row").forEach(row=>{
@@ -53,7 +42,6 @@ function recalculateGrandTotal(){
   saveToLocal();
 }
 
-/* ================= FORMAT ================= */
 function formatIN(str){
   if(str === "" || str === "-" || str.includes('e')) return str;
   let [i,d] = String(str).split(".");
@@ -72,7 +60,6 @@ function formatTokenForDisplay(t){
   return t;
 }
 
-/* ================= LIVE UI ================= */
 function updateLive(){
   let text = tokens.map(formatTokenForDisplay).join(" ");
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>` : `<span class="caret"></span>`;
@@ -100,10 +87,13 @@ function setOp(op){
   updateLive(); return true;
 }
 
+/* SMART PERCENT LOGIC */
 function applyPercent(){
   if(tokens.length < 2) return false;
   let percentToken = tokens.at(-1);
+  let operator = tokens.at(-2);
   if(isNaN(percentToken)) return false;
+
   let subtotal = Number(tokens[0]);
   for(let i = 1; i < tokens.length - 2; i += 2){
     let op = tokens[i], valToken = tokens[i+1];
@@ -111,9 +101,23 @@ function applyPercent(){
     if(op === "+") subtotal += val; if(op === "-") subtotal -= val;
     if(op === "×") subtotal *= val; if(op === "÷") subtotal /= val;
   }
-  let percentValue = clean(subtotal * Number(percentToken) / 100);
-  tokens[tokens.length - 1] = { text: formatIN(percentToken) + "%", value: percentValue };
-  updateLive(); return true;
+
+  let finalValue;
+  if(operator === "×" || operator === "÷") {
+    // Pure Math: -100 * 20% = -20
+    finalValue = clean(Number(percentToken) / 100);
+  } else {
+    // Billing Style: -100 + 20% = -80
+    finalValue = clean(Math.abs(subtotal) * Number(percentToken) / 100);
+  }
+
+  tokens[tokens.length - 1] = {
+    text: formatIN(percentToken) + "%",
+    value: finalValue
+  };
+
+  updateLive();
+  return true;
 }
 
 function evaluate(){
@@ -133,10 +137,7 @@ function enter(){
   if(result < 0) row.querySelector(".h-res").classList.add("negative");
   enableSwipe(row);
   historyEl.appendChild(row);
-  tokens = [];
-  updateLive();
-  recalculateGrandTotal();
-  scrollHistoryToBottom();
+  tokens = []; updateLive(); recalculateGrandTotal(); scrollHistoryToBottom();
   return true;
 }
 
@@ -151,65 +152,30 @@ function back(){
 
 function clearAll(){
   if(!tokens.length && !historyEl.innerHTML) return false;
-  tokens = [];
-  historyEl.innerHTML = "";
-  updateLive();
-  recalculateGrandTotal();
+  tokens = []; historyEl.innerHTML = ""; updateLive(); recalculateGrandTotal();
   return true;
 }
 
-/* ================= TOUCH CONTROLS ================= */
+/* ================= CONTROLS ================= */
 let cutTimer = null, cutLong = false;
 function cutPressStart(e){ 
-  e.preventDefault(); 
-  cutLong = false; 
-  cutTimer = setTimeout(()=>{ 
-    if(tokens.length){ 
-      tokens = []; 
-      updateLive(); 
-      pulse(); // Feedback for clear
-    } 
-    cutLong = true; 
-  },450); 
+  e.preventDefault(); cutLong = false; 
+  cutTimer = setTimeout(()=>{ if(tokens.length){ tokens = []; updateLive(); pulse(); } cutLong = true; },450); 
 }
-function cutPressEnd(e){ 
-  e.preventDefault(); 
-  clearTimeout(cutTimer); 
-  if(!cutLong && back()) pulse(); 
-}
+function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) pulse(); }
 function cutPressCancel(){ clearTimeout(cutTimer); }
 
-/* ================= SWIPE ================= */
 function enableSwipe(row){
   let sx=0, dx=0, drag=false;
-  row.addEventListener("pointerdown", e=>{
-    sx = e.clientX;
-    drag = true;
-    row.classList.add("swiping");
-    row.style.transition = "none";
-  });
-  row.addEventListener("pointermove", e=>{
-    if(!drag) return;
-    dx = e.clientX - sx;
-    if(dx < 0) row.style.transform = `translateX(${dx}px)`;
-  });
+  row.addEventListener("pointerdown", e=>{ sx = e.clientX; drag = true; row.classList.add("swiping"); row.style.transition = "none"; });
+  row.addEventListener("pointermove", e=>{ if(!drag) return; dx = e.clientX - sx; if(dx < 0) row.style.transform = `translateX(${dx}px)`; });
   row.addEventListener("pointerup", ()=>{
-    drag = false;
-    row.style.transition = "transform .25s ease";
+    drag = false; row.style.transition = "transform .25s ease";
     if(dx < -(row.offsetWidth * 0.35)){
-      row.style.transform = "translateX(-100%)";
-      pulse(); // Delete vibration
+      row.style.transform = "translateX(-100%)"; pulse();
       setTimeout(()=>{ row.remove(); recalculateGrandTotal(); },200);
-    }else{
-      row.style.transform = "translateX(0)";
-      setTimeout(() => row.classList.remove("swiping"), 200);
-    }
+    }else{ row.style.transform = "translateX(0)"; setTimeout(() => row.classList.remove("swiping"), 200); }
     dx = 0;
-  });
-  row.addEventListener("pointercancel", ()=>{
-    drag = false;
-    row.style.transform = "translateX(0)";
-    row.classList.remove("swiping");
   });
 }
 
