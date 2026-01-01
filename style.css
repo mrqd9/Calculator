@@ -6,30 +6,30 @@ html,body{
   margin:0;
   height:100%;
   overflow:hidden;
-  background:#1f1f1f;
-  font-family:system-ui;
+  background:#1a1a1a;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* APP CONTAINER */
 .calc{
   height:100dvh;
-  padding:12px;
-  background:#202020;
+  padding:15px;
+  background:#1a1a1a;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:12px;
 }
 
-/* SCREEN DISPLAY */
+/* SCREEN DISPLAY (GLASS UI) */
 .display{
   flex:1;
   min-height:0;
-  background:linear-gradient(180deg,#e6ede3,#cfd6c8);
-  border-radius:18px;
-  padding:14px;
+  background: linear-gradient(165deg, #e0e9da, #bdc9b6);
+  border-radius:24px;
+  padding:20px;
   display:flex;
   flex-direction:column;
-  box-shadow:0 10px 26px rgba(0,0,0,.28);
+  box-shadow: inset 0 2px 5px rgba(255,255,255,0.5), 0 15px 35px rgba(0,0,0,0.4);
 }
 
 /* HISTORY LIST */
@@ -39,121 +39,102 @@ html,body{
   overflow-y:auto;
   display:flex;
   flex-direction:column;
-  gap:4px;
-  padding-right:2px;
-  scrollbar-gutter: stable;
+  gap:6px;
+  padding-right:4px;
 }
 
-.history::-webkit-scrollbar{ width:4px; }
-.history::-webkit-scrollbar-thumb{ background:rgba(0,0,0,.25); border-radius:4px; }
+.history::-webkit-scrollbar{ width:3px; }
+.history::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.1); border-radius:10px; }
 
-/* HISTORY ROW (FIXED OVERLAP) */
+/* HISTORY ROW (FIXED GRID) */
 .h-row{
   position:relative;
   display:grid;
-  /* Left side takes available space, right side fits content */
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* Fixed 65% for expression, auto for result */
+  grid-template-columns: 65% auto; 
   align-items: center;
-  padding:6px 16px;
-  border-radius:999px;
-  background:rgba(255,255,255,.38);
-  backdrop-filter:blur(6px);
-  touch-action:pan-y;
-  transition:transform .2s ease;
-  overflow:hidden;
-  flex-shrink:0;
+  padding:8px 16px;
+  border-radius:14px;
+  background: rgba(255,255,255,0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  margin-bottom: 2px;
+  transition: transform 0.2s ease;
   user-select: none;
-  -webkit-user-select: none;
 }
 
-/* SOLID RED DELETE LAYER */
+/* SOLID DELETE OVERLAY */
 .h-row::before{
-  content:"←  Delete";
+  content:"Delete";
   position:absolute;
   inset:0;
-  background:#d32f2f;
-  color:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  padding-right:24px;
-  font-size:18px;
-  font-weight:700;
+  background: #e53935;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 25px;
+  font-weight: 600;
+  border-radius: 14px;
   opacity:0;
-  transition:opacity .1s ease;
-  z-index:10; 
+  z-index: 10;
 }
-
 .h-row.swiping::before{ opacity:1; }
 
-/* TRUNCATION FOR LONG EXPRESSIONS */
-.h-exp{ 
-  text-align:right; 
-  padding-right:12px; 
-  font-size:15px; 
-  opacity:.7;
+/* EXPRESSION AREA (FIXED WITH E-NOTATION) */
+.h-exp{
+  text-align: right;
+  padding-right: 12px;
+  font-size: 14px;
+  color: #444;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; /* Long input will show as 1234... = */
 }
 
-/* RESULT STYLING */
-.h-res{ 
-  text-align:right; 
-  padding-left:12px; 
-  font-size:18px; 
-  font-weight:700; 
-  border-left:1px solid rgba(0,0,0,0.15);
+/* RESULT AREA */
+.h-res{
+  text-align: right;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  border-left: 1.5px solid rgba(0,0,0,0.1);
+  padding-left: 12px;
   white-space: nowrap;
 }
 
-.negative{ color:#b00020; }
-.separator{ height:1px; background:linear-gradient(to right,transparent,#999,transparent); margin:6px 0; }
-.live{ height:28px; text-align:center; font-size:22px; font-weight:500; overflow: hidden; }
-.total{ height:40px; text-align:right; font-size:32px; font-weight:600; overflow: hidden; }
+.negative{ color:#c62828 !important; }
+.separator{ height:1px; background: rgba(0,0,0,0.05); margin:10px 0; }
+
+.live{ height:35px; text-align:center; font-size:26px; font-weight:600; color:#333; }
+.total{ height:45px; text-align:right; font-size:36px; font-weight:800; color:#000; }
 
 .caret{
-  display:inline-block;
-  width:1.5px;
-  height:1.1em;
-  background:#333;
-  margin-left:3px;
-  vertical-align:-0.15em;
-  animation:blink 1s steps(1) infinite;
+  display:inline-block; width:2px; height:1.2em; background:#2e7d32;
+  margin-left:4px; vertical-align:-0.2em; animation:blink 1s steps(1) infinite;
 }
 @keyframes blink{ 50%{opacity:0;} }
 
 /* KEYPAD */
 .keys{
-  flex:0 0 auto;
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:6px;
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding-bottom: 5px;
 }
 
 button{
-  height:56px;
-  border:0;
-  border-radius:18px;
-  font-size:26px;
-  font-weight:600;
-  color:#fff;
-  background:linear-gradient(180deg,#5a5a5a,#3f3f3f);
-  box-shadow:0 5px 12px rgba(0,0,0,.35);
-  user-select:none;
+  height:62px; border:0; border-radius:20px; font-size:24px; font-weight:600;
+  color:#efefef; background: #333;
+  box-shadow: 0 4px 0 #1a1a1a, 0 8px 15px rgba(0,0,0,0.2);
+  transition: all 0.1s;
 }
-button:active{ transform:translateY(1px) scale(.97); }
 
-.num{ background:linear-gradient(180deg,#606060,#484848); }
-.op{ background:linear-gradient(180deg,#6b6b6b,#525252); }
-.ac{ background:linear-gradient(180deg,#ff5f5f, #e04848); }
-.eq{ grid-column:span 2; font-size:28px; background:linear-gradient(180deg,#7a7a7a,#5f5f5f); }
+button:active{ transform: translateY(2px); box-shadow: 0 2px 0 #1a1a1a, 0 4px 8px rgba(0,0,0,0.3); }
+
+.num{ background: #3d3d3d; }
+.op{ background: #4a4a4a; color: #81c784; }
+.ac{ background: #b71c1c; color: #fff; }
+.eq{ grid-column: span 2; background: #2e7d32; color: #fff; }
 
 @media (orientation:landscape){
-  body::before{
-    content:"Rotate phone to vertical mode";
-    position:fixed; inset:0; background:#000; color:#fff;
-    display:flex; align-items:center; justify-content:center; z-index:9999;
-  }
+  body::before{ content:"Please use Portrait Mode"; position:fixed; inset:0; background:#000; color:#fff; display:flex; align-items:center; justify-content:center; z-index:9999; }
   .calc{display:none;}
 }
