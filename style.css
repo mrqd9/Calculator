@@ -55,7 +55,7 @@ html,body{
   background:transparent;
 }
 
-/* HISTORY ROW (CAPSULE) */
+/* HISTORY ROW */
 .h-row{
   position:relative;
   display:grid;
@@ -68,14 +68,13 @@ html,body{
   transition:transform .2s ease;
   overflow:hidden;
   flex-shrink:0;
-  /* Long touch par text select hone se rokne ke liye */
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* RED DELETE BACKGROUND */
+/* RED DELETE LAYER (SOLID) */
 .h-row::before{
-  content:"Delete";
+  content:"←  Delete";
   position:absolute;
   inset:0;
   background:#d32f2f;
@@ -83,28 +82,19 @@ html,body{
   display:flex;
   align-items:center;
   justify-content:flex-end;
-  padding-right:18px;
-  font-size:15px;
-  font-weight:600;
+  padding-right:24px;
+  font-size:18px;
+  font-weight:700;
   opacity:0;
-  transition:opacity .15s ease;
-  z-index:0;
+  transition:opacity .1s ease;
+  z-index:5; /* Numbers ke upar */
 }
 
-/* SHOW DELETE UI ONLY WHILE SWIPING */
+/* Jab swipe ho raha ho tab layer dikhe */
 .h-row.swiping::before{
   opacity:1;
 }
 
-/* Content above red layer */
-.h-row > *{
-  position:relative;
-  z-index:1;
-  transition:opacity .12s ease;
-  pointer-events: none; /* Prevents text interference during swipe */
-}
-
-/* TEXT */
 .h-exp{
   text-align:right;
   padding-right:10px;
