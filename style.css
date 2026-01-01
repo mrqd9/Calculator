@@ -9,31 +9,6 @@ html,body{
   background:#1f1f1f;
   font-family:system-ui;
 }
-/* Purana CSS rahega, bas ye extra add karein */
-
-.gst-bar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.gst-btn {
-  height: 40px;
-  font-size: 14px;
-  background: linear-gradient(180deg, #4a90e2, #357abd);
-  border-radius: 12px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-}
-
-.gst-btn:active {
-  transform: scale(0.95);
-}
-
-/* AC button ko thoda alag dikhane ke liye */
-.ac {
-  background: linear-gradient(180deg, #ff5f5f, #e04848);
-}
 
 /* APP */
 .calc{
@@ -92,66 +67,41 @@ html,body{
   touch-action:pan-y;
   transition:transform .2s ease;
   overflow:hidden;
-  flex-shrink:0; /* IMPORTANT: never shrink */
+  flex-shrink:0;
+  /* Long touch par text select hone se rokne ke liye */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-/* RED DELETE BACKGROUND + TEXT */
+/* RED DELETE BACKGROUND */
 .h-row::before{
   content:"Delete";
   position:absolute;
   inset:0;
   background:#d32f2f;
   color:#fff;
-
   display:flex;
   align-items:center;
   justify-content:flex-end;
-
   padding-right:18px;
-  font-size:15px;          /* Delete text normal */
+  font-size:15px;
   font-weight:600;
-
   opacity:0;
   transition:opacity .15s ease;
-  pointer-events:none;
-  z-index:0;
-}
-
-/* BIG LEFT ARROW (ONLY ARROW BIG) */
-.h-row::after{
-  content:"←";
-  position:absolute;
-  right:64px;              /* arrow sits before Delete */
-  top:50%;
-  transform:translateY(-50%);
-
-  font-size:34px;          /* 🔑 arrow big */
-  font-weight:700;
-  color:#fff;
-
-  opacity:0;
-  transition:opacity .15s ease;
-  pointer-events:none;
   z-index:0;
 }
 
 /* SHOW DELETE UI ONLY WHILE SWIPING */
-.h-row.swiping::before,
-.h-row.swiping::after{
+.h-row.swiping::before{
   opacity:1;
 }
 
-/* Fade content while swiping */
-.h-row.swiping .h-exp,
-.h-row.swiping .h-res{
-  opacity:0;
-}
-
-/* Content above red */
+/* Content above red layer */
 .h-row > *{
   position:relative;
   z-index:1;
   transition:opacity .12s ease;
+  pointer-events: none; /* Prevents text interference during swipe */
 }
 
 /* TEXT */
@@ -169,19 +119,16 @@ html,body{
   border-left:1px solid rgba(0,0,0,.18);
 }
 
-/* NEGATIVE VALUES */
 .negative{
   color:#b00020;
 }
 
-/* SEPARATOR */
 .separator{
   height:1px;
   background:linear-gradient(to right,transparent,#999,transparent);
   margin:6px 0;
 }
 
-/* LIVE INPUT */
 .live{
   height:28px;
   min-height:28px;
@@ -190,7 +137,6 @@ html,body{
   font-weight:500;
 }
 
-/* GRAND TOTAL */
 .total{
   height:40px;
   min-height:40px;
@@ -199,7 +145,6 @@ html,body{
   font-weight:600;
 }
 
-/* CARET */
 .caret{
   display:inline-block;
   width:1.5px;
@@ -213,15 +158,13 @@ html,body{
   50%{opacity:0;}
 }
 
-/* KEYS */
 .keys{
-  flex:0 0 auto;   /* AUTO height – best UX */
+  flex:0 0 auto;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:6px;
 }
 
-/* BUTTONS */
 button{
   height:56px;
   border:0;
@@ -237,17 +180,15 @@ button:active{
   transform:translateY(1px) scale(.97);
 }
 
-/* BUTTON TYPES */
 .num{background:linear-gradient(180deg,#606060,#484848)}
 .op{background:linear-gradient(180deg,#6b6b6b,#525252)}
-.ac{background:linear-gradient(180deg,#d05aa8,#b6468e)}
+.ac{background:linear-gradient(180deg,#ff5f5f, #e04848)}
 .eq{
   grid-column:span 2;
   font-size:28px;
   background:linear-gradient(180deg,#7a7a7a,#5f5f5f);
 }
 
-/* LANDSCAPE BLOCK */
 @media (orientation:landscape){
   body::before{
     content:"Rotate phone to vertical mode";
