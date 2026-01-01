@@ -3,11 +3,11 @@ let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
 let tokens = [];
 
-/* ================= tactile vibration ================= */
+/* ================= VIBRATION ================= */
 function pulse() { if (navigator.vibrate) navigator.vibrate(30); }
 function tap(fn){ let ok = fn(); if(ok) pulse(); }
 
-/* ================= helpers ================= */
+/* ================= HELPERS ================= */
 function clean(n){
   if (isNaN(n)) return 0;
   return Math.round((n + Number.EPSILON) * 1e12) / 1e12;
@@ -17,7 +17,7 @@ function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{ historyEl.scrollTop = historyEl.scrollHeight; });
 }
 
-/* ================= storage ================= */
+/* ================= STORAGE ================= */
 function saveToLocal() { localStorage.setItem("billing_calc_history", historyEl.innerHTML); }
 function loadFromLocal() {
   const saved = localStorage.getItem("billing_calc_history");
@@ -40,7 +40,7 @@ function recalculateGrandTotal(){
   saveToLocal();
 }
 
-/* ================= formatting ================= */
+/* ================= FORMATTING ================= */
 function formatIN(str){
   if(str === "" || str === "-" || str.includes('e')) return str;
   let [i,d] = String(str).split(".");
@@ -64,17 +64,20 @@ function updateLive(){
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>` : `<span class="caret"></span>`;
 }
 
-/* ================= logic ================= */
+/* ================= ACTIONS ================= */
 function digit(d){
   let last = tokens.at(-1);
   // Auto-multiply if number follows a % object
   if(typeof last === "object") { tokens.push("×"); tokens.push(d === "." ? "0." : d); updateLive(); return true; }
+  
   if(!tokens.length){ tokens.push(d === "." ? "0." : d); updateLive(); return true; }
   if(last === "-" && tokens.length === 1){ tokens[0] = d === "." ? "-0." : "-" + d; updateLive(); return true; }
   if(["+","-","×","÷"].includes(last)){ tokens.push(d === "." ? "0." : d); updateLive(); return true; }
   if(d === "." && last.includes(".")) return false;
+  
   let pure = last.replace("-","").replace(".","");
   if(d !== "." && pure.length >= 15) return false;
+
   tokens[tokens.length - 1] += d;
   updateLive(); return true;
 }
@@ -96,7 +99,6 @@ function applyPercent(){
   let operator = tokens.at(-2);
   let subtotal = Number(tokens[0]);
   
-  // Calculate subtotal for context
   for(let i = 1; i < tokens.length - 2; i += 2){
     let op = tokens[i], t = tokens[i+1];
     let v = Number(typeof t === "object" ? t.value : t);
@@ -105,21 +107,15 @@ function applyPercent(){
   }
 
   let finalPercentVal;
-  // Use billing logic only for + and -
+  // Billing logic for +/- , Pure math logic for others (-100%20)
   if(operator === "+" || operator === "-") {
     finalPercentVal = clean(Math.abs(subtotal) * val / 100);
   } else {
-    // Math logic for everything else (e.g., -100% 20)
     finalPercentVal = clean(val / 100);
   }
 
-  tokens[tokens.length - 1] = {
-    text: formatIN(last) + "%",
-    value: finalPercentVal
-  };
-  
-  updateLive();
-  return true;
+  tokens[tokens.length - 1] = { text: formatIN(last) + "%", value: finalPercentVal };
+  updateLive(); return true;
 }
 
 function evaluate(){
@@ -158,13 +154,16 @@ function clearAll(){
   return true;
 }
 
-/* ================= touch ================= */
+/* ================= CONTROLS ================= */
 let cutTimer = null, cutLong = false;
 function cutPressStart(e){ 
   e.preventDefault(); cutLong = false; 
   cutTimer = setTimeout(()=>{ if(tokens.length){ tokens = []; updateLive(); pulse(); } cutLong = true; },450); 
 }
-function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) pulse(); }
+function cutPressEnd(e){ 
+  e.preventDefault(); clearTimeout(cutTimer); 
+  if(!cutLong && back()) pulse(); 
+}
 
 function enableSwipe(row){
   let sx=0, dx=0, drag=false;
