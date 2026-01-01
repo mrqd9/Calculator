@@ -58,9 +58,12 @@ function formatTokenForDisplay(t){
   return t;
 }
 
+/* Updated Live for expansion and auto-scroll */
 function updateLive(){
   let text = tokens.map(formatTokenForDisplay).join(" ");
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>` : `<span class="caret"></span>`;
+  // Auto-scroll within live area if it grows
+  liveEl.scrollTop = liveEl.scrollHeight;
 }
 
 function digit(d){
@@ -146,16 +149,13 @@ function cutPressStart(e){
 }
 function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) pulse(); }
 
-/* IMPROVED SWIPE LOGIC (No sticking) */
 function enableSwipe(row){
   let sx=0, dx=0, dragging=false;
-
   row.addEventListener("touchstart", e => {
     sx = e.touches[0].clientX;
     dragging = true;
     row.style.transition = "none";
   }, {passive: true});
-
   row.addEventListener("touchmove", e => {
     if(!dragging) return;
     dx = e.touches[0].clientX - sx;
@@ -164,7 +164,6 @@ function enableSwipe(row){
       row.style.transform = `translateX(${dx}px)`;
     }
   }, {passive: true});
-
   row.addEventListener("touchend", () => {
     dragging = false;
     row.style.transition = "transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)";
