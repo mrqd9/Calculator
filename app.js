@@ -8,7 +8,12 @@ function tap(fn){
   if(ok && navigator.vibrate) navigator.vibrate(15);
 }
 
-function clean(n){ return Number(parseFloat(n).toFixed(12)); }
+/* PRECISION FIX: Handles floating point errors like 0.00000000008 */
+function clean(n) {
+  if (isNaN(n)) return 0;
+  // Use exponential to avoid scientific notation and round to 12 decimal places
+  return Math.round((n + Number.EPSILON) * 1e12) / 1e12;
+}
 
 function scrollHistoryToBottom(){
   requestAnimationFrame(()=>{ historyEl.scrollTop = historyEl.scrollHeight; });
@@ -41,13 +46,14 @@ function recalculateGrandTotal(){
 }
 
 function formatIN(str){
-  if(str === "" || str === "-") return str;
+  if(str === "" || str === "-" || str.includes('e')) return str; // Don't format scientific notation
   let [i,d] = String(str).split(".");
+  let sign = i.startsWith("-") ? "-" : "";
   i = i.replace(/\D/g,"");
   let last3 = i.slice(-3);
   let rest = i.slice(0,-3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
-  return (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
+  return sign + (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
 function formatTokenForDisplay(t){
@@ -62,29 +68,6 @@ function updateLive(){
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>` : `<span class="caret"></span>`;
 }
 
-/* GST LOGIC: +GST adds to total, -GST extracts from total */
-function applyGST(rate) {
-  if(!tokens.length || isNaN(tokens.at(-1))) return false;
-  
-  let currentVal = evaluate();
-  let gstAmount = 0;
-  let label = "";
-
-  if(rate > 0) { // Add GST
-    gstAmount = clean(currentVal * (rate / 100));
-    label = `+${rate}%G`;
-  } else { // Remove GST (Reverse calculation)
-    let r = Math.abs(rate);
-    gstAmount = clean(currentVal - (currentVal / (1 + r/100)));
-    gstAmount = -gstAmount; 
-    label = `-${r}%G`;
-  }
-
-  tokens.push({ text: label, value: gstAmount });
-  updateLive();
-  return true;
-}
-
 function digit(d){
   let last = tokens.at(-1);
   if(!tokens.length){ tokens.push(d === "." ? "0." : d); updateLive(); return true; }
@@ -93,7 +76,7 @@ function digit(d){
   if(typeof last === "object") return false;
   if(d === "." && last.includes(".")) return false;
   let pure = last.replace("-","").replace(".","");
-  if(d !== "." && pure.length >= 12) return false;
+  if(d !== "." && pure.length >= 15) return false; // Increased limit for precision
   tokens[tokens.length - 1] += d;
   updateLive(); return true;
 }
@@ -126,7 +109,7 @@ function evaluate(){
   if(!tokens.length) return 0;
   let exp = tokens.map(t => (typeof t === "object" ? t.value : t)).join(" ")
     .replace(/×/g,"*").replace(/÷/g,"/");
-  try { return clean(Function("return " + exp)()); } catch { return 0; }
+  try { return clean(new Function("return " + exp)()); } catch { return 0; }
 }
 
 function enter(){
@@ -158,7 +141,7 @@ function back(){
 
 function clearAll(){
   if(!tokens.length && !historyEl.innerHTML) return false;
-  if(confirm("Clear all history?")) {
+  if(confirm("Clear everything?")) {
     tokens = [];
     historyEl.innerHTML = "";
     updateLive();
@@ -168,10 +151,9 @@ function clearAll(){
   return false;
 }
 
-/* Long Press Backspace */
 let cutTimer = null, cutLong = false;
-function cutPressStart(e){ e.preventDefault(); cutLong = false; cutTimer = setTimeout(()=>{ if(tokens.length){ tokens = []; updateLive(); navigator.vibrate && navigator.vibrate(25); } cutLong = true; },450); }
-function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) navigator.vibrate && navigator.vibrate(15); }
+function cutPressStart(e){ e.preventDefault(); cutLong = false; cutTimer = setTimeout(()=>{ if(tokens.length){ tokens = []; updateLive(); if(navigator.vibrate) navigator.vibrate(25); } cutLong = true; },450); }
+function cutPressEnd(e){ e.preventDefault(); clearTimeout(cutTimer); if(!cutLong && back()) if(navigator.vibrate) navigator.vibrate(15); }
 function cutPressCancel(){ clearTimeout(cutTimer); }
 
 function enableSwipe(row){
@@ -188,6 +170,5 @@ function enableSwipe(row){
   });
 }
 
-// Initialize load
 loadFromLocal();
 updateLive();
