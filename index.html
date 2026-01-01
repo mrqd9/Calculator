@@ -20,12 +20,6 @@
     <div class="separator"></div>
     <div id="total" class="total">0</div>
   </div>
-  
-  <div class="gst-bar">
-    <button class="gst-btn" onclick="tap(()=>applyGST(18))">+18% GST</button>
-    <button class="gst-btn" onclick="tap(()=>applyGST(-18))">-18% GST</button>
-    <button class="gst-btn" onclick="tap(()=>applyGST(12))">+12% GST</button>
-  </div>
 
   <div class="keys">
     <button class="ac" onclick="tap(clearAll)">AC</button>
@@ -57,7 +51,7 @@
 <script src="app.js"></script>
 <script>
 if ("serviceWorker" in navigator) {
-  navigator.worker.register("./sw.js");
+  navigator.serviceWorker.register("./sw.js");
 }
 </script>
 </body>
