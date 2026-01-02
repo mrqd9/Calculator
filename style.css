@@ -73,19 +73,25 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
   background: rgba(0,0,0,0.05); 
   border-top: 1px solid rgba(0,0,0,0.05);
   
-  /* FIXED PROPERTIES */
-  display: block;            /* Allows text to behave like a paragraph */
-  text-align: right;         /* Aligns typing to the right for calculator feel */
-  white-space: pre-wrap;     /* Allows wrapping while keeping spaces */
-  word-wrap: break-word;     /* Prevents long numbers from breaking layout */
-  overflow-y: auto;          /* Scroll vertically if text is very long */
+  /* CENTERED WRAPPING SETUP */
+  display: block;            /* Essential for the caret to follow text flow */
+  text-align: center;        /* Centers your typing */
+  white-space: pre-wrap;     /* Allows text to wrap to new lines */
+  word-wrap: break-word;     /* Prevents long numbers from breaking the layout */
+  overflow-y: auto;          /* Scroll vertically if typing gets very long */
   height: auto;
-  max-height: 150px;         /* Prevents it from taking over the whole screen */
+  max-height: 150px; 
 }
 
-/* Caret and Total styling */
-.live-preview span {
-  display: inline;           /* Keeps everything on the same line flow */
+/* Caret styling to ensure visibility */
+.caret { 
+  display: inline-block; 
+  width: 2px; 
+  height: 1.2em; 
+  background: #333; 
+  margin-left: 2px; 
+  vertical-align: middle; 
+  animation: blink 1s steps(1) infinite; 
 }
 
 /* Total Strip */
