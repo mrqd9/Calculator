@@ -64,16 +64,28 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
 .swipe-arrow::before { transform: rotate(-45deg); }
 .h-row.swiping::before, .h-row.swiping .swipe-arrow { opacity: 1; }
 
-.live-preview { padding: 6px; font-size: 20px; font-weight: 600; color: #111; min-height: 40px; background: rgba(0,0,0,0.05); border-top: 1px solid rgba(0,0,0,0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  overflow-x: auto;
+.live-preview { 
+  padding: 10px; 
+  font-size: 20px; 
+  font-weight: 600; 
+  color: #111; 
+  min-height: 40px; 
+  background: rgba(0,0,0,0.05); 
+  border-top: 1px solid rgba(0,0,0,0.05);
+  
+  /* FIXED PROPERTIES */
+  display: block;            /* Allows text to behave like a paragraph */
+  text-align: right;         /* Aligns typing to the right for calculator feel */
+  white-space: pre-wrap;     /* Allows wrapping while keeping spaces */
+  word-wrap: break-word;     /* Prevents long numbers from breaking layout */
+  overflow-y: auto;          /* Scroll vertically if text is very long */
+  height: auto;
+  max-height: 150px;         /* Prevents it from taking over the whole screen */
 }
 
+/* Caret and Total styling */
 .live-preview span {
-  flex-shrink: 0;
+  display: inline;           /* Keeps everything on the same line flow */
 }
 
 /* Total Strip */
