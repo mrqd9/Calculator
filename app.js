@@ -8,10 +8,20 @@ let tokens = [];
 function pulse() { if (navigator.vibrate) navigator.vibrate(30); }
 function tap(fn){ let result = fn(); if(result !== false) pulse(); }
 
+/** High precision cleanup for internal math */
 function clean(n){
   if (isNaN(n)) return 0;
   let val = Math.round((n + Number.EPSILON) * 1e12) / 1e12;
   return Math.abs(val) > 1e15 ? val.toExponential(4) : val;
+}
+
+/** Helper to format numbers for billing display */
+function toBillingString(val) {
+  let n = Number(val);
+  if (Math.abs(n) >= 1e14) {
+    return n.toExponential(4); 
+  }
+  return n.toFixed(2);
 }
 
 function getGrandSum() {
@@ -25,7 +35,10 @@ function getGrandSum() {
 
 function recalculateGrandTotal(){
   let sum = getGrandSum();
-  totalEl.innerText = formatIN(sum.toString());
+  let displaySum = toBillingString(sum);
+  totalEl.innerText = formatIN(displaySum);
+  // Update data-total attribute for the print CSS
+  historyEl.setAttribute('data-total', totalEl.innerText);
   totalEl.classList.toggle("negative", sum < 0);
   saveToLocal();
 }
@@ -79,6 +92,16 @@ function showArchive() {
   return true;
 }
 
+function clearArchive() {
+  if (!confirm("Are you sure you want to permanently delete all archived records?")) return false;
+  
+  localStorage.removeItem("calc_archive");
+  // Refresh the list display immediately
+  showArchive();
+  pulse();
+  return true;
+}
+
 function closeArchive() { 
   archiveModal.style.display = "none";
   if (window.history.state && window.history.state.modal === "archive") window.history.back();
@@ -88,13 +111,15 @@ window.onpopstate = () => { if (archiveModal.style.display === "block") archiveM
 
 function formatIN(str){
   if(str === "" || str === "-" || str.includes('e')) return str;
-  let [i,d] = String(str).split(".");
+  let [i, d] = String(str).split(".");
   let sign = i.startsWith("-") ? "-" : "";
-  i = i.replace(/\D/g,"");
-  if (i.length > 15) return Number(str).toExponential(4);
+  i = i.replace(/\D/g, "");
+  if (i.length > 12) {
+    return Number(str).toExponential(4);
+  }
   let last3 = i.slice(-3);
-  let rest = i.slice(0,-3);
-  if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+  let rest = i.slice(0, -3);
+  if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
   return sign + (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
@@ -161,9 +186,9 @@ function enter(){
   let result = evaluate();
   let row = document.createElement("div");
   row.className = "h-row";
-  row.dataset.value = result;
+  row.dataset.value = result; 
   let expText = tokens.map(formatTokenForDisplay).join(" ");
-  let resText = formatIN(result.toString());
+  let resText = formatIN(toBillingString(result));
   row.innerHTML = `<span class="h-exp">${expText} =</span><span class="h-res ${result < 0 ? 'negative' : ''}">${resText}</span><div class="swipe-arrow"></div>`;
   
   const tester = document.createElement('span');
@@ -181,8 +206,22 @@ function enter(){
 }
 
 function evaluate(){
-  let exp = tokens.map(t => (typeof t === "object" ? t.value : t)).join(" ").replace(/×/g,"*").replace(/÷/g,"/");
-  try { return clean(new Function("return " + exp)()); } catch { return 0; }
+  // Clean trailing operators to prevent errors
+  let tempTokens = [...tokens];
+  while (tempTokens.length > 0 && ["+", "-", "×", "÷"].includes(tempTokens.at(-1))) {
+    tempTokens.pop();
+  }
+  if (tempTokens.length === 0) return 0;
+
+  let exp = tempTokens.map(t => (typeof t === "object" ? t.value : t))
+                      .join(" ")
+                      .replace(/×/g, "*")
+                      .replace(/÷/g, "/");
+  try { 
+    return clean(new Function("return " + exp)()); 
+  } catch { 
+    return 0; 
+  }
 }
 
 function back(){
