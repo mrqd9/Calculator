@@ -134,15 +134,15 @@ function updateLive(){
   let currentEval = evaluate();
   let liveTotalDisplay = "";
   
-  // Show total only if there is an actual equation (more than 1 token)
+  // Show total only if it's a multi-token equation
   if (tokens.length > 1) {
-    liveTotalDisplay = `<span style="opacity: 0.5; font-size: 0.85em; margin-left: 8px; font-weight: 400;">= ${formatIN(toBillingString(currentEval))}</span>`;
+    liveTotalDisplay = `<span style="opacity: 0.5; font-size: 0.85em; margin-left: 8px; font-weight: 400; white-space: nowrap;">= ${formatIN(toBillingString(currentEval))}</span>`;
   }
 
-  // Update HTML with text, caret, and live total
+  // The order here is critical: Text -> Caret -> Total
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>${liveTotalDisplay}` : `<span class="caret"></span>`;
   
-  // Auto-scroll to the bottom so the newest typed line is always visible
+  // Scroll to the bottom as the lines wrap
   liveEl.scrollTop = liveEl.scrollHeight;
 }
 
