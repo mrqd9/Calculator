@@ -131,7 +131,17 @@ function formatTokenForDisplay(t){
 
 function updateLive(){
   let text = tokens.map(formatTokenForDisplay).join(" ");
-  liveEl.innerHTML = text ? `${text}<span class="caret"></span>` : `<span class="caret"></span>`;
+  
+  // Calculate the current live total
+  let currentEval = evaluate();
+  let liveTotalDisplay = "";
+  
+  // Only show the live total if there are tokens and it's not just a single number
+  if (tokens.length > 1) {
+    liveTotalDisplay = `<span style="opacity: 0.5; font-size: 0.8em; margin-left: 8px;">= ${formatIN(toBillingString(currentEval))}</span>`;
+  }
+
+  liveEl.innerHTML = text ? `${text}<span class="caret"></span>${liveTotalDisplay}` : `<span class="caret"></span>`;
   liveEl.scrollTop = liveEl.scrollHeight;
 }
 
