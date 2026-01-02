@@ -131,17 +131,18 @@ function formatTokenForDisplay(t){
 
 function updateLive(){
   let text = tokens.map(formatTokenForDisplay).join(" ");
-  
-  // Calculate the current live total
   let currentEval = evaluate();
   let liveTotalDisplay = "";
   
-  // Only show the live total if there are tokens and it's not just a single number
+  // Show total only if there is an actual equation (more than 1 token)
   if (tokens.length > 1) {
-    liveTotalDisplay = `<span style="opacity: 0.5; font-size: 0.8em; margin-left: 8px;">= ${formatIN(toBillingString(currentEval))}</span>`;
+    liveTotalDisplay = `<span style="opacity: 0.5; font-size: 0.85em; margin-left: 8px; font-weight: 400;">= ${formatIN(toBillingString(currentEval))}</span>`;
   }
 
+  // Update HTML with text, caret, and live total
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>${liveTotalDisplay}` : `<span class="caret"></span>`;
+  
+  // Auto-scroll to the bottom so the newest typed line is always visible
   liveEl.scrollTop = liveEl.scrollHeight;
 }
 
