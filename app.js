@@ -261,7 +261,7 @@ function enableSwipe(row){
   row.addEventListener("touchmove", e => { if(!dragging) return; dx = e.touches[0].clientX - sx; if(dx < 0) { row.classList.add("swiping"); row.style.transform = `translateX(${dx}px)`; } }, {passive: true});
   row.addEventListener("touchend", () => {
     dragging = false; row.style.transition = "transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)";
-    if(dx < -80){ row.style.transform = "translateX(-110%)"; pulse(); setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); }
+    if(dx < -120){ row.style.transform = "translateX(-110%)"; pulse(); setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); }
     else { row.style.transform = "translateX(0)"; setTimeout(() => row.classList.remove("swiping"), 300); }
     dx = 0;
   });
