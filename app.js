@@ -96,7 +96,6 @@ function clearArchive() {
   if (!confirm("Are you sure you want to permanently delete all archived records?")) return false;
   
   localStorage.removeItem("calc_archive");
-  // Refresh the list display immediately
   showArchive();
   pulse();
   return true;
@@ -191,11 +190,16 @@ function enter(){
   let resText = formatIN(toBillingString(result));
   row.innerHTML = `<span class="h-exp">${expText} =</span><span class="h-res ${result < 0 ? 'negative' : ''}">${resText}</span><div class="swipe-arrow"></div>`;
   
+  // FIX: Accurate width tester to trigger expansion correctly
   const tester = document.createElement('span');
-  tester.style.cssText = 'visibility:hidden; white-space:nowrap; font-size:15px; position:absolute;';
+  tester.style.cssText = 'visibility:hidden; white-space:nowrap; font-size:15px; font-family:inherit; position:absolute; padding: 0 10px;';
   tester.innerText = expText + " =";
   document.body.appendChild(tester);
-  if (tester.offsetWidth > (historyEl.offsetWidth * 0.58)) row.classList.add("can-expand");
+  
+  // Trigger expandable mode if text crosses 55% of the container
+  if (tester.offsetWidth > (historyEl.offsetWidth * 0.55)) {
+    row.classList.add("can-expand");
+  }
   document.body.removeChild(tester);
 
   enableSwipe(row);
@@ -206,7 +210,6 @@ function enter(){
 }
 
 function evaluate(){
-  // Clean trailing operators to prevent errors
   let tempTokens = [...tokens];
   while (tempTokens.length > 0 && ["+", "-", "×", "÷"].includes(tempTokens.at(-1))) {
     tempTokens.pop();
@@ -258,11 +261,31 @@ function enableSwipe(row){
     if (!isExpanded) { row.classList.add("expanded"); pulse(); setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100); }
   };
   row.addEventListener("touchstart", e => { sx = e.touches[0].clientX; dragging = true; row.style.transition = "none"; }, {passive: true});
-  row.addEventListener("touchmove", e => { if(!dragging) return; dx = e.touches[0].clientX - sx; if(dx < 0) { row.classList.add("swiping"); row.style.transform = `translateX(${dx}px)`; } }, {passive: true});
+  row.addEventListener("touchmove", e => { 
+    if(!dragging) return; 
+    dx = e.touches[0].clientX - sx; 
+    if(dx < 0) { 
+      row.classList.add("swiping"); 
+      row.style.transform = `translateX(${dx}px)`; 
+    } 
+  }, {passive: true});
+  
   row.addEventListener("touchend", () => {
-    dragging = false; row.style.transition = "transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)";
-    if(dx < -120){ row.style.transform = "translateX(-110%)"; pulse(); setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); }
-    else { row.style.transform = "translateX(0)"; setTimeout(() => row.classList.remove("swiping"), 300); }
+    dragging = false; 
+    row.style.transition = "transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)";
+    
+    // FIX: Use dynamic 50% screen width threshold for deletion
+    const threshold = row.offsetWidth * 0.5;
+    
+    if(Math.abs(dx) > threshold){ 
+      row.style.transform = "translateX(-110%)"; 
+      pulse(); 
+      setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); 
+    }
+    else { 
+      row.style.transform = "translateX(0)"; 
+      setTimeout(() => row.classList.remove("swiping"), 300); 
+    }
     dx = 0;
   });
 }
