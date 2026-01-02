@@ -64,7 +64,17 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
 .swipe-arrow::before { transform: rotate(-45deg); }
 .h-row.swiping::before, .h-row.swiping .swipe-arrow { opacity: 1; }
 
-.live-preview { padding: 6px; text-align: center; font-size: 20px; font-weight: 600; color: #111; min-height: 40px; background: rgba(0,0,0,0.05); border-top: 1px solid rgba(0,0,0,0.05); }
+.live-preview { padding: 6px; font-size: 20px; font-weight: 600; color: #111; min-height: 40px; background: rgba(0,0,0,0.05); border-top: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.live-preview span {
+  flex-shrink: 0;
+}
 
 /* Total Strip */
 .total-strip { display: flex; flex-direction: column; align-items: center; padding: 0 18px 0; flex-shrink: 0; }
