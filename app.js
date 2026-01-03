@@ -163,7 +163,7 @@ function formatTokenForDisplay(t){
 function updateLive(){
   let text = tokens.map(formatTokenForDisplay).join(" ");
   let currentEval = evaluate();
-  let liveTotalDisplay = tokens.length > 1 ? `<span style="opacity: 0.5; font-size: 1.1em; margin-left: 10px; font-weight: 500; white-space: nowrap;">= ${formatIN(toBillingString(currentEval))}</span>` : "";
+  let liveTotalDisplay = tokens.length > 1 ? `<span style="opacity: 0.6; font-size: 1.0em; margin-left: 10px; font-weight: 500; white-space: nowrap;">= ${formatIN(toBillingString(currentEval))}</span>` : "";
   liveEl.innerHTML = text ? `${text}<span class="caret"></span>${liveTotalDisplay}` : `<span class="caret"></span>`;
   liveEl.scrollTop = liveEl.scrollHeight;
 }
