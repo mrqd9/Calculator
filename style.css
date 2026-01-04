@@ -139,7 +139,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
     margin-bottom: 0; 
     display: flex; 
     justify-content: space-between; 
-    align-items: flex-start; 
+    align-items: flex-end; 
     padding: 8px 0; 
     height: auto !important; 
     page-break-inside: avoid; 
