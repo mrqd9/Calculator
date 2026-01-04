@@ -252,8 +252,31 @@ function enableSwipe(row){
   let sx=0, dx=0, dragging=false;
   row.onclick = (e) => { e.stopPropagation(); if (row.classList.contains("swiping") || !row.classList.contains("can-expand")) return; const isExpanded = row.classList.contains("expanded"); document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); if (!isExpanded) { row.classList.add("expanded"); pulse(); setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100); } };
   row.addEventListener("touchstart", e => { sx = e.touches[0].clientX; dragging = true; row.style.transition = "none"; }, {passive: true});
-  row.addEventListener("touchmove", e => { if(!dragging) return; dx = e.touches[0].clientX - sx; if(dx < 0) { row.classList.add("swiping"); row.style.transform = `translateX(${dx}px)`; } }, {passive: true});
-  row.addEventListener("touchend", () => { dragging = false; row.style.transition = "transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)"; const threshold = row.offsetWidth * 0.5; if(Math.abs(dx) > threshold){ row.style.transform = "translateX(-110%)"; pulse(); setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); } else { row.style.transform = "translateX(0)"; setTimeout(() => row.classList.remove("swiping"), 300); } dx = 0; });
+  row.addEventListener("touchmove", e => { 
+    if(!dragging) return; 
+    dx = e.touches[0].clientX - sx; 
+    if(dx < 0) { 
+      row.classList.add("swiping"); 
+      row.style.transform = `translateX(${dx}px)`; 
+      let arrow = row.querySelector(".swipe-arrow");
+      if(arrow) arrow.style.width = (14 + Math.abs(dx)) + "px"; // Stretchable logic
+    } 
+  }, {passive: true});
+  row.addEventListener("touchend", () => { 
+    dragging = false; 
+    row.style.transition = "transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)"; 
+    const threshold = row.offsetWidth * 0.5; 
+    let arrow = row.querySelector(".swipe-arrow");
+    if(Math.abs(dx) > threshold){ 
+      row.style.transform = "translateX(-110%)"; pulse(); 
+      setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); 
+    } else { 
+      row.style.transform = "translateX(0)"; 
+      if(arrow) arrow.style.width = "14px"; // Reset width
+      setTimeout(() => row.classList.remove("swiping"), 300); 
+    } 
+    dx = 0; 
+  });
 }
 
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
