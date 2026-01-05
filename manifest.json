@@ -29,5 +29,10 @@
     }
   ],
   "id": "com.mrqd9.addingcalculatorpro",
-  "description": "Adding Calculator Pro is a specialized adding machine designed for business owners, accountants, and retail professionals in India. Unlike standard calculators, this app provides a continuous \"paper-tape\" history of your entries, ensuring you never lose track of a long sequence of additions.\n​Key Features:\n​Indian Currency Formatting: Displays totals in the ₹ Lakh/Crore system for intuitive reading.\n​Virtual Paper Tape: View every entry in a scrollable history list to verify your math.\n​Swipe-to-Delete: Accidentally added a wrong number? Simply swipe a row to remove it from the total.\n​Billing Ready: Generate clean, professional summaries of your calculations.\n​Print &amp; PDF: Optimized print layout allows you to print summaries or save them as PDFs for clients.\n​Archive &amp; History: Save your sessions and restore them later for auditing.\n​Privacy First: No internet required. All data stays on your device.\n​Perfect for shopkeepers."
+  "description": "Adding Calculator Pro is a specialized adding machine designed for business owners, accountants, and retail professionals in India. Unlike standard calculators, this app provides a continuous \"paper-tape\" history of your entries, ensuring you never lose track of a long sequence of additions.\n​Key Features:\n​Indian Currency Formatting: Displays totals in the ₹ Lakh/Crore system for intuitive reading.\n​Virtual Paper Tape: View every entry in a scrollable history list to verify your math.\n​Swipe-to-Delete: Accidentally added a wrong number? Simply swipe a row to remove it from the total.\n​Billing Ready: Generate clean, professional summaries of your calculations.\n​Print &amp; PDF: Optimized print layout allows you to print summaries or save them as PDFs for clients.\n​Archive &amp; History: Save your sessions and restore them later for auditing.\n​Privacy First: No internet required. All data stays on your device.\n​Perfect for shopkeepers.", 
+  "lang": "en"
+  "categories": ["finance", "productivity", "utilities", "business"],
+  "edge_side_panel": {
+   "preferred_width": 480
+   }
 }
