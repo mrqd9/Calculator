@@ -35,4 +35,20 @@
   "edge_side_panel": {
    "preferred_width": 480
    }
+  "screenshots": [
+  {
+    "src": "screenshot-main.jpg",
+    "sizes": "1220x2450",
+    "type": "image/jpeg",
+    "form_factor": "narrow",
+    "label": "Calculator Main Interface"
+  },
+  {
+    "src": "screenshot-history.jpg",
+    "sizes": "1220x2450",
+    "type": "image/jpeg",
+    "form_factor": "narrow",
+    "label": "Calculator History View"
+  }
+]
 }
