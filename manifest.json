@@ -1,6 +1,7 @@
 {
   "name": "Adding Calculator Pro",
   "short_name": "Calculator",
+  "author": "mrqd9",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
