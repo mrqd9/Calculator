@@ -52,7 +52,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
   border-radius: 2px;
 }
 
-.swipe-arrow::after, .swipe-arrow::before { content: ''; position: absolute; left: -3px; width: 8px; height: 3px; border-radius: 2px; background: white; transform-origin: left; }
+.swipe-arrow::after, .swipe-arrow::before { content: ''; position: absolute; left: 3px; width: 8px; height: 3px; border-radius: 2px; background: white; transform-origin: left; }
 .swipe-arrow::after { transform: rotate(35deg); }
 .swipe-arrow::before { transform: rotate(-35deg); }
 .h-row.swiping::before, .h-row.swiping .swipe-arrow { opacity: 1; }
