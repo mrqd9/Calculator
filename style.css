@@ -48,6 +48,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
   z-index: 2; 
   transition: opacity 0.1s ease; 
   border-radius: 99px;
+  display: flex;
+  align-items: center;
 }
 
 .swipe-arrow::after, 
@@ -58,8 +60,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
   width: 10px; 
   height: 3px; 
   background: inherit; 
-  transform-origin: 1.5px center; 
   border-radius: 99px;
+  transform-origin: 1.5px center; 
 }
 
 .swipe-arrow::after { 
