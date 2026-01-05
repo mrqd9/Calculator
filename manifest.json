@@ -28,7 +28,7 @@
     }
   ],
   "id": "com.mrqd9.addingcalculatorpro",
-  "description": "Professional adding machine with paper-tape history and Indian currency formatting. Features swipe-to-delete entries, billing-ready summaries, and offline-first privacy for business owners and accountants.",
+  "description": "Professional adding machine with paper-tape history and Indian currency formatting for accurate billing and accounting.",
   "lang": "en",
   "categories": ["finance", "productivity", "utilities", "business"],
   "edge_side_panel": {
