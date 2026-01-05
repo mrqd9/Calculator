@@ -2,15 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "com.mrqd9.addingcalculatorpro",
-        "sha256_cert_fingerprints": ["9E:E1:3E:87:52:A4:AF:31:F1:9C:73:ED:A7:5F:EF:60:90:45:00:54:40:A5:29:8A:72:3F:59:06:CB:22:F9:81"]
-      }
-    }], 
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.mrqd9.addingcalculatorpro",
-        "sha256_cert_fingerprints": ["01:41:EE:19:50:2A:48:92:55:A9:79:12:7C:E9:D0:1A:AB:B5:83:BE:B4:6A:59:0D:BC:07:81:7B:73:4C:B4:1C"]
+        "package_name": "io.github.mrqd9.twa",
+        "sha256_cert_fingerprints": ["D5:82:F4:B7:F2:0F:71:3C:26:32:99:4D:0B:A0:69:AD:CC:C1:40:B3:FA:B2:4A:B3:A2:47:22:85:BF:7B:49:4C"]
       }
     }]
