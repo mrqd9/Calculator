@@ -108,18 +108,52 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
 
 @keyframes blink { 50% { opacity: 0; } }
 
-.print-header { display: none; text-align: center; font-size: 26px; font-weight: 900; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-
 @media print {
-  body { background: white !important; color: black !important; }
-  .keys, .action-bar, .total-strip, .modal, .live-preview, .caret, .rotation-overlay { display: none !important; }
+  html, body, .calc, .display-container, .history { 
+    height: auto !important; 
+    min-height: auto !important; 
+    overflow: visible !important; 
+    background: #fff !important; 
+    color: #000 !important; 
+    border: none !important; 
+    border-radius: 0 !important; 
+    box-shadow: none !important; 
+    visibility: visible !important;
+  }
+  .keys, .action-bar, .total-strip, .modal, .live-preview, .caret, .rotation-overlay, .swipe-arrow { display: none !important; }
   .print-header { display: block !important; }
-  .display-container { background: white !important; border: none; box-shadow: none; display: block; overflow: visible; }
-  .history { overflow: visible !important; padding: 0; }
-  .h-row { background: white !important; border-bottom: 1px solid #ddd !important; border-radius: 0; margin-bottom: 0; display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; height: auto !important; page-break-inside: avoid; }
-  .h-exp { flex: 0 0 70%; text-align: right !important; white-space: normal !important; overflow: visible !important; padding: 0 10px 0 0; font-size: 14px; color: #333 !important; }
-  .h-res { flex: 0 0 30%; text-align: right !important; white-space: nowrap !important; overflow: visible !important; font-size: 14px; font-weight: 700; color: #000 !important; }
-  .history::after { content: "GRAND TOTAL: " attr(data-total); display: block; text-align: right; font-size: 22px; font-weight: 900; border-top: 2px solid #000; margin-top: 20px; padding-top: 10px; }
+  .history::before {
+  content: "Summary";
+  display: block !important;
+  text-align: center;
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+  }
+  .h-row { 
+    display: flex !important; 
+    justify-content: space-between !important; 
+    align-items: flex-start; 
+    border-bottom: 1px solid #ddd !important; 
+    border-radius: 0 !important; 
+    padding: 8px 0; 
+    page-break-inside: avoid; 
+    transform: none !important; 
+  }
+  .h-exp { flex: 0 0 70%; text-align: right !important; font-size: 14px; color: #333 !important; padding-right: 10px; }
+  .h-res { flex: 0 0 30%; text-align: right !important; font-size: 14px; font-weight: 700; color: #000 !important; }
+  .history::after { 
+    content: "GRAND TOTAL: " attr(data-total); 
+    display: block !important; 
+    text-align: right; 
+    font-size: 22px; 
+    font-weight: 900; 
+    border-top: 2px solid #eee; 
+    margin-top: 20px; 
+    padding-top: 10px; 
+  }
 }
 
 .rotation-overlay { display: none; position: fixed; inset: 0; background: #121212; color: #81c784; z-index: 100000; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
