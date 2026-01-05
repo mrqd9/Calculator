@@ -41,15 +41,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
   right: 70px;
   top: 50%; 
   transform: translateY(-50%); 
-  width: 16px; 
+  width: 24px; 
   height: 3px; 
   background: white; 
   opacity: 0; 
   z-index: 2; 
-  transition: opacity 0.1s ease; 
+  transition: opacity 0.2s ease; 
   border-radius: 99px;
-  display: flex;
-  align-items: center;
 }
 
 .swipe-arrow::after, 
@@ -65,16 +63,22 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
 }
 
 .swipe-arrow::after { 
-  transform: rotate(45deg); 
+  transform: rotate(35deg); 
 }
 
 .swipe-arrow::before { 
-  transform: rotate(-45deg); 
+  transform: rotate(-35deg); 
 }
 
-.h-row.swiping::before, 
 .h-row.swiping .swipe-arrow { 
   opacity: 1; 
+  animation: arrowPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes arrowPulse {
+  0% { transform: translateY(-50%) translateX(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-50%) translateX(-8px) scale(1.1); opacity: 0.7; }
+  100% { transform: translateY(-50%) translateX(0) scale(1); opacity: 1; }
 }
 
 .live-preview { padding: 10px; font-size: 22px; font-weight: 600; color: #111; min-height: 40px; background: rgba(0,0,0,0.05); border-top: 1px solid rgba(0,0,0,0.05); display: block; text-align: center; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; height: auto; max-height: 150px; }
