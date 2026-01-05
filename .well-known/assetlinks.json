@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.mrqd9.addingcalculatorpro",
+        "sha256_cert_fingerprints": ["9E:E1:3E:87:52:A4:AF:31:F1:9C:73:ED:A7:5F:EF:60:90:45:00:54:40:A5:29:8A:72:3F:59:06:CB:22:F9:81"]
+      }
+    }]
