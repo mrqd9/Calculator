@@ -2,7 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "io.github.mrqd9.twa",
+        "package_name": "io.github.mrqd9.Calculator",
         "sha256_cert_fingerprints": ["D5:82:F4:B7:F2:0F:71:3C:26:32:99:4D:0B:A0:69:AD:CC:C1:40:B3:FA:B2:4A:B3:A2:47:22:85:BF:7B:49:4C"]
       }
     }]
