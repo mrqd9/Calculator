@@ -19,6 +19,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
 .h-row.expanded .h-exp { white-space: normal; text-align: right; border-bottom: 1px dashed rgba(0,0,0,0.1); padding-bottom: 6px; flex: none; width: 100%; word-wrap: break-word; }
 .h-row.expanded .h-res { flex: none; padding-top: 6px; white-space: nowrap; font-size: 18px; }
 
+
 .h-row::before { 
   content: "Delete"; 
   position: absolute; 
@@ -41,37 +42,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
   right: 70px;
   top: 50%; 
   transform: translateY(-50%); 
-  width: 24px; 
+  width: 14px; 
   height: 3px; 
   background: white; 
   opacity: 0; 
   z-index: 2; 
-  transition: opacity 0.2s ease, transform 0.2s ease; 
-  border-radius: 99px;
+  transition: opacity 0.1s ease; 
+  transform-origin: right center;
+  border-radius: 2px;
 }
-.swipe-arrow::after, 
-.swipe-arrow::before { 
-  content: ''; 
-  position: absolute; 
-  left: 0; 
-  width: 10px; 
-  height: 3px; 
-  background: inherit; 
-  border-radius: 99px;
-  transform-origin: 1.5px center; 
-}
-.swipe-arrow::after { 
-  transform: rotate(35deg); 
-}
-.swipe-arrow::before { 
-  transform: rotate(-35deg); 
-}
-.h-row.swiping .swipe-arrow { 
-  opacity: 1; 
-}
-.h-row.swiping .swipe-arrow {
-  transform: translateY(-50%) translateX(-5px);
-}
+
+.swipe-arrow::after, .swipe-arrow::before { content: ''; position: absolute; left: 0; width: 8px; height: 3px; background: white; transform-origin: left; }
+.swipe-arrow::after { transform: rotate(35deg); }
+.swipe-arrow::before { transform: rotate(-35deg); }
+.h-row.swiping::before, .h-row.swiping .swipe-arrow { opacity: 1; }
 
 .live-preview { padding: 10px; font-size: 22px; font-weight: 600; color: #111; min-height: 40px; background: rgba(0,0,0,0.05); border-top: 1px solid rgba(0,0,0,0.05); display: block; text-align: center; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; height: auto; max-height: 150px; }
 .caret { display: inline-block; width: 2px; height: 1.2em; background: #333; margin-left: 2px; vertical-align: middle; animation: blink 1s steps(1) infinite; }
