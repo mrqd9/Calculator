@@ -40,14 +40,14 @@
     "src": "screenshot-main.jpg",
     "sizes": "1220x2450",
     "type": "image/jpg",
-    "form_factor": "narrow",
+    "platform": "narrow",
     "label": "Calculator Main Interface"
   },
   {
     "src": "screenshot-history.jpg",
     "sizes": "1220x2450",
     "type": "image/jpg",
-    "form_factor": "narrow",
+    "platform": "narrow",
     "label": "Calculator History View"
   }
 ]
