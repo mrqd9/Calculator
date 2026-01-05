@@ -2,6 +2,8 @@
   "name": "Adding Calculator Pro",
   "short_name": "Calculator",
   "author": "mrqd9",
+  "description": "A professional adding machine with a paper-tape history, Indian currency formatting, and print-ready summaries for billing calculations.",
+  "categories": ["finance", "productivity", "utilities"],
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
