@@ -282,3 +282,43 @@ function enableSwipe(row){
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
 loadFromLocal();
 updateLive();
+
+document.addEventListener('keydown', (e) => {
+  if (archiveModal.style.display === "block") {
+    if (e.key === 'Escape') closeArchive();
+    return;
+  }
+
+  const key = e.key;
+  const ctrl = e.ctrlKey || e.metaKey;
+
+  if (ctrl && key.toLowerCase() === 'p') {
+    e.preventDefault();
+    tap(() => window.print());
+  } else if (ctrl && key.toLowerCase() === 'c') {
+    e.preventDefault();
+    tap(copyToClipboard);
+  } else if (key.toLowerCase() === 'h') {
+    tap(showArchive);
+  } else if (/[0-9.]/.test(key)) {
+    tap(() => digit(key));
+  } else if (key === '+') {
+    tap(() => setOp('+'));
+  } else if (key === '-') {
+    tap(() => setOp('-'));
+  } else if (key === '*' || key.toLowerCase() === 'x') {
+    tap(() => setOp('×'));
+  } else if (key === '/') {
+    e.preventDefault();
+    tap(() => setOp('÷'));
+  } else if (key === '%') {
+    tap(applyPercent);
+  } else if (key === 'Enter' || key === '=') {
+    e.preventDefault();
+    tap(enter);
+  } else if (key === 'Backspace') {
+    tap(back);
+  } else if (key === 'Escape' || key === 'Delete') {
+    tap(clearAll);
+  }
+});
