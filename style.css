@@ -24,7 +24,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; fon
   content: "Delete"; 
   position: absolute; 
   inset: 0; 
-  background: #d32f2f; 
+  background: #d13435; 
   color: white; 
   display: flex; 
   align-items: center; 
