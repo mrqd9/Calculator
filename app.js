@@ -5,7 +5,13 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
+
 let historyEl = document.getElementById("history");
 let liveEl = document.getElementById("live");
 let totalEl = document.getElementById("total");
@@ -13,6 +19,8 @@ let archiveModal = document.getElementById("archive-modal");
 let archiveList = document.getElementById("archive-list");
 let tokens = [];
 let activeSessionId = null;
+
+// --- CORE UTILITIES ---
 
 function pulse() { if (navigator.vibrate) navigator.vibrate(30); }
 function tap(fn){ let result = fn(); if(result !== false) pulse(); }
@@ -28,6 +36,8 @@ function toBillingString(val) {
   if (Math.abs(n) >= 1e14) return n.toExponential(4); 
   return n.toFixed(2);
 }
+
+// --- TOTALS & PERSISTENCE ---
 
 function getGrandSum() {
   let sum = 0;
@@ -61,6 +71,8 @@ function loadFromLocal() {
     recalculateGrandTotal();
   }
 }
+
+// --- ARCHIVE LOGIC ---
 
 function clearAll(){
   if(!tokens.length && !historyEl.innerHTML) return false;
@@ -152,6 +164,8 @@ function clearArchive() { if (!confirm("Delete all history?")) return; localStor
 function closeArchive() { archiveModal.style.display = "none"; if (window.history.state?.modal === "archive") window.history.back(); }
 window.onpopstate = () => { if (archiveModal.style.display === "block") archiveModal.style.display = "none"; };
 
+// --- FORMATTING (INDIAN SYSTEM) ---
+
 function formatIN(str){
   if(str === "" || str === "-" || str.includes('e')) return str;
   let [i, d] = String(str).split("."); let sign = i.startsWith("-") ? "-" : "";
@@ -167,6 +181,8 @@ function formatTokenForDisplay(t){
   if(/^\d/.test(t)) return formatIN(t);
   return t;
 }
+
+// --- CALCULATION LOGIC ---
 
 function updateLive(){
   let text = tokens.map(formatTokenForDisplay).join(" ");
@@ -256,6 +272,8 @@ function cutPressStart(e){ cutLong = false; cutTimer = setTimeout(()=>{ if(token
 function cutPressEnd(e){ clearTimeout(cutTimer); if(!cutLong && back()) pulse(); }
 function cutPressCancel(){ clearTimeout(cutTimer); }
 
+// --- SWIPE GESTURE ---
+
 function enableSwipe(row){
   let sx=0, dx=0, dragging=false;
   row.onclick = (e) => { e.stopPropagation(); if (row.classList.contains("swiping") || !row.classList.contains("can-expand")) return; const isExpanded = row.classList.contains("expanded"); document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); if (!isExpanded) { row.classList.add("expanded"); pulse(); setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100); } };
@@ -267,7 +285,7 @@ function enableSwipe(row){
       row.classList.add("swiping"); 
       row.style.transform = `translateX(${dx}px)`; 
       let arrow = row.querySelector(".swipe-arrow");
-      if(arrow) arrow.style.width = (14 + Math.abs(dx)) + "px"; // Stretchable logic
+      if(arrow) arrow.style.width = (14 + Math.abs(dx)) + "px"; 
     } 
   }, {passive: true});
   row.addEventListener("touchend", () => { 
@@ -280,16 +298,16 @@ function enableSwipe(row){
       setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); 
     } else { 
       row.style.transform = "translateX(0)"; 
-      if(arrow) arrow.style.width = "14px"; // Reset width
+      if(arrow) arrow.style.width = "14px"; 
       setTimeout(() => row.classList.remove("swiping"), 300); 
     } 
     dx = 0; 
   });
 }
 
+// --- EVENT LISTENERS (KEYBOARD & BOOT) ---
+
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
-loadFromLocal();
-updateLive();
 
 document.addEventListener('keydown', (e) => {
   if (archiveModal.style.display === "block") {
@@ -300,9 +318,11 @@ document.addEventListener('keydown', (e) => {
   const key = e.key;
   const ctrl = e.ctrlKey || e.metaKey;
 
+  // PRINT FIX: Direct window.print call for Ctrl+P to ensure user gesture validation
   if (ctrl && key.toLowerCase() === 'p') {
     e.preventDefault();
-    tap(() => window.print());
+    pulse(); 
+    window.print(); 
   } else if (ctrl && key.toLowerCase() === 'c') {
     e.preventDefault();
     tap(copyToClipboard);
@@ -330,3 +350,6 @@ document.addEventListener('keydown', (e) => {
     tap(clearAll);
   }
 });
+
+loadFromLocal();
+updateLive();
