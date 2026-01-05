@@ -21,11 +21,7 @@
 <div class="calc">
   <div class="action-bar">
     <button id="copy-btn" class="btn-action" onclick="tap(copyToClipboard)"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
-    <button class="btn-action" onpointerdown="window.print(); pulse();">
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-    <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
-  </svg>
-</button>
+    <button class="btn-action" onclick="tap(()=>window.print())"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
     <button class="btn-action" onclick="tap(showArchive)"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 7 7 7.07 7.07 0 0 1-6-3.18l-1.42 1.42A8.97 8.97 0 1 0 13 3zm-1 5v5l4.28 2.53.72-1.27-3.5-2.08V8z"/></svg></button>
   </div>
 
