@@ -1,0 +1,19 @@
+name: Code Quality Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Check for Syntax Errors
+        # This simple script checks if the JS files are valid
+        run: |
+          find . -name "*.js" | xargs -n 1 node -c
