@@ -1,3 +1,17 @@
+/*
+ * Adding Calculator Pro - Stylesheet
+ * Copyright (C) 2026 mrqd9
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; outline: none; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #121212; font-family: 'Roboto', sans-serif; }
 .calc { height: 100dvh; padding: 4px 6px; background: #121212; display: flex; flex-direction: column; gap: 4px; }
