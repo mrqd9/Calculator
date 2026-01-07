@@ -199,24 +199,23 @@ function applyPercent(){
   if(tokens.length < 1) return false;
   let last = tokens.at(-1), val = Number(last);
   if(isNaN(last) || typeof last === "object") return false;
+  let displayText = formatIN(last).replace("-", "- ") + "%";
   if (tokens.length === 1) {
     let gSum = getGrandSum();
     if (gSum !== 0) {
-      tokens[0] = { text: formatIN(last) + "%", value: clean(val / 100) };
-      tokens.push("×"); tokens.push(Math.abs(gSum).toString());
-      updateLive(); return true;
+      let percentVal = clean(val / 100);
+      tokens[0] = { text: displayText, value: percentVal };
+      tokens.push("×"); 
+      tokens.push(Math.abs(gSum).toString());
+      updateLive(); 
+      return true;
     }
   }
-  let operator = tokens.at(-2), subtotal = Number(tokens[0]);
-  for(let i = 1; i < tokens.length - 2; i += 2){
-    let op = tokens[i], t = tokens[i+1], v = Number(typeof t === "object" ? t.value : t);
-    if(op === "+") subtotal += v; if(op === "-") subtotal -= v;
-    if(op === "×") subtotal *= v; if(op === "÷") subtotal /= v;
-  }
-  let finalVal = (operator === "+" || operator === "-") ? clean(Math.abs(subtotal) * val / 100) : clean(val / 100);
-  tokens[tokens.length - 1] = { text: formatIN(last) + "%", value: finalVal };
-  updateLive(); return true;
-}
+  let finalVal = clean(val / 100);
+  tokens[tokens.length - 1] = { text: displayText, value: finalVal };
+  updateLive(); 
+  return true;
+} 
 
 function enter(){
   if(!tokens.length) return false;
