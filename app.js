@@ -195,10 +195,10 @@ function setOp(op){
   updateLive(); return true;
 }
 
-function applyPercent(){
-  if(tokens.length < 1) return false;
+function applyPercent() {
+  if (tokens.length < 1) return false;
   let last = tokens.at(-1), val = Number(last);
-  if(isNaN(last) || typeof last === "object") return false;
+  if (isNaN(last) || typeof last === "object") return false;
   let displayText = formatIN(last).replace("-", "- ") + "%";
   if (tokens.length === 1) {
     let gSum = getGrandSum();
@@ -211,11 +211,24 @@ function applyPercent(){
       return true;
     }
   }
+  if (tokens.length > 2) {
+    let op = tokens.at(-2);
+    if (op === "+" || op === "-") {
+      let subTokens = tokens.slice(0, -2);
+      let exp = subTokens.map(t => (typeof t === "object" ? t.value : t)).join(" ").replace(/×/g, "*").replace(/÷/g, "/");
+      let runningTotal = 0;
+      try { runningTotal = new Function("return " + exp)(); } catch { runningTotal = 0; }
+      let finalVal = clean(runningTotal * (val / 100));
+      tokens[tokens.length - 1] = { text: displayText, value: finalVal };
+      updateLive(); 
+      return true;
+    }
+  }
   let finalVal = clean(val / 100);
   tokens[tokens.length - 1] = { text: displayText, value: finalVal };
   updateLive(); 
   return true;
-} 
+}
 
 function enter(){
   if(!tokens.length) return false;
