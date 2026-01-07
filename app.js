@@ -196,10 +196,11 @@ function setOp(op){
 }
 
 function applyPercent() {
+  while (tokens.length > 0 && ["+", "-", "×", "÷"].includes(tokens.at(-1))) { tokens.pop(); }
   if (tokens.length < 1) return false;
   let last = tokens.at(-1), val = Number(last);
   if (isNaN(last) || typeof last === "object") return false;
-  let displayText = formatIN(last).replace("-", "- ") + "%";
+  let displayText = formatIN(last).replace("-", "- ") + " %";
   if (tokens.length === 1) {
     let gSum = getGrandSum();
     if (gSum !== 0) {
