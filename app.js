@@ -4,6 +4,7 @@
  * Licensed under GNU GPL v3 or later.
  */
 
+// 1. SETUP
 let displayContainer = document.querySelector(".display-container");
 let oldLive = document.getElementById("live");
 
@@ -64,6 +65,14 @@ function tap(fn) {
 }
 
 // --- EVENT LISTENERS ---
+
+// [NEW FIX] Prevent keyboard popping up on PWA restore
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    liveInput.blur(); // Unfocus text so keyboard doesn't pop on restore
+  }
+});
+
 document.querySelectorAll('.btn-key').forEach(btn => {
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault(); 
@@ -275,7 +284,7 @@ function ensureFocus() {
   }
 }
 
-// --- LOGIC FUNCTIONS (Updated safeInsert) ---
+// --- LOGIC FUNCTIONS (Includes Smart Dot 0.) ---
 function safeInsert(char, type) {
   ensureFocus();
   let sel = window.getSelection();
@@ -299,14 +308,14 @@ function safeInsert(char, type) {
        
        if (lastSegment.includes('.')) return false; 
        
-       // NEW: If starting a new number (empty/whitespace), insert "0."
+       // If starting a new number (empty/whitespace), insert "0."
        if (lastSegment.trim() === "") {
          char = "0.";
        }
      }
   } else {
     if (type === 'op' && char !== '-') return false; 
-    // NEW: If at start, insert "0."
+    // If at start, insert "0."
     if (type === 'dot') char = "0.";
   }
 
@@ -428,6 +437,7 @@ function evaluate(sourceTokens = tokens){
 liveInput.addEventListener("input", handleInput);
 liveInput.addEventListener("paste", (e) => e.preventDefault()); 
 
+// --- APP & DATA ---
 function recalculateGrandTotal(){
   let sum = getGrandSum();
   let displaySum = toBillingString(sum);
@@ -600,6 +610,13 @@ function cutPressEnd(e){
   } 
 }
 function cutPressCancel(){ clearTimeout(cutTimer); }
+
+// Make global for inline HTML
+window.cutPressStart = cutPressStart;
+window.cutPressEnd = cutPressEnd;
+window.cutPressCancel = cutPressCancel;
+window.closeArchive = closeArchive;
+window.restoreSession = restoreSession;
 
 function copyToClipboard() {
   const history = document.querySelectorAll(".h-row");
