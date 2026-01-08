@@ -66,10 +66,10 @@ function tap(fn) {
 
 // --- EVENT LISTENERS ---
 
-// [NEW FIX] Prevent keyboard popping up on PWA restore
+// PWA KEYBOARD FIX: Prevent keyboard popping up on restore
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
-    liveInput.blur(); // Unfocus text so keyboard doesn't pop on restore
+    liveInput.blur(); 
   }
 });
 
@@ -284,7 +284,7 @@ function ensureFocus() {
   }
 }
 
-// --- LOGIC FUNCTIONS (Includes Smart Dot 0.) ---
+// --- LOGIC FUNCTIONS (Replacement + Smart Dot) ---
 function safeInsert(char, type) {
   ensureFocus();
   let sel = window.getSelection();
@@ -293,13 +293,31 @@ function safeInsert(char, type) {
 
   if (range.startOffset > 0) {
      let fullTextBefore = liveInput.innerText.substring(0, range.startOffset);
+     // Ignore spaces for logic checks
      let prevChar = fullTextBefore.trim().slice(-1);
 
      if (type === 'op') {
        if (["+", "-", "×", "÷"].includes(prevChar) && char !== "%") { 
+         
+         // 1. Block duplicate
          if (prevChar === char) return false; 
+         
+         // 2. Block replacing initial negative sign
          if (fullTextBefore.trim().length === 1 && prevChar === '-') return false; 
-         return false;
+         
+         // 3. REPLACEMENT LOGIC
+         let textNode = range.startContainer;
+         if (textNode.nodeType === 3) { 
+             let opIndex = fullTextBefore.lastIndexOf(prevChar);
+             if (opIndex !== -1) {
+                 let replaceRange = document.createRange();
+                 replaceRange.setStart(textNode, opIndex);
+                 replaceRange.setEnd(textNode, range.startOffset);
+                 sel.removeAllRanges();
+                 sel.addRange(replaceRange);
+                 // Fall through to insertText will now REPLACE
+             }
+         }
        }
      }
      if (type === 'dot') {
@@ -308,14 +326,13 @@ function safeInsert(char, type) {
        
        if (lastSegment.includes('.')) return false; 
        
-       // If starting a new number (empty/whitespace), insert "0."
+       // Smart Dot: Start with 0.
        if (lastSegment.trim() === "") {
          char = "0.";
        }
      }
   } else {
     if (type === 'op' && char !== '-') return false; 
-    // If at start, insert "0."
     if (type === 'dot') char = "0.";
   }
 
@@ -346,7 +363,7 @@ function back(){
   return true;
 }
 
-// --- CORE LOGIC ---
+// --- CORE LOGIC (Smart Percent Update) ---
 function parseAndRecalculate(resetCursor = true) {
   let rawText = liveInput.innerText.replace(/[, ]/g, "");
   
@@ -391,13 +408,26 @@ function parseAndRecalculate(resetCursor = true) {
     let t = rawTokens[i];
     if (typeof t === "object" && t.isPercent) {
       let calculatedValue = t.value; 
+      
+      // NEW: Check for next multiplication
+      let nextToken = rawTokens[i + 1];
+      let isNextScale = ["×", "÷", "*", "/"].includes(nextToken);
+
       if (t.count === 1 && !t.text.includes('%') ) { 
       } else if (t.count === 1) {
           let percentVal = t.rawNum;
-          if (i === 0 || (i === 1 && rawTokens[0] === "-")) {
+          
+          // 1. If followed by ×/÷, it's a raw ratio (0.1)
+          if (isNextScale) {
+             calculatedValue = clean(percentVal / 100);
+          }
+          // 2. Start of line? Use Grand Total
+          else if (i === 0 || (i === 1 && rawTokens[0] === "-")) {
             let gSum = getGrandSum();
             if (gSum !== 0) calculatedValue = clean(Math.abs(gSum) * (percentVal / 100));
-          } else if (i > 1) {
+          } 
+          // 3. Middle? Use Previous Number
+          else if (i > 1) {
             let op = rawTokens[i - 1]; 
             if (op === "+" || op === "-") {
                let subExprTokens = tokens.slice(0, tokens.length - 1); 
