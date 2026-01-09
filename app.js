@@ -4,112 +4,327 @@
  * Licensed under GNU GPL v3 or later.
  */
 
-// 1. SETUP
-let displayContainer = document.querySelector(".display-container");
-let oldLive = document.getElementById("live");
+/* =========================================
+   1. SETUP & DOM ELEMENTS
+   ========================================= */
+const DOM = {
+  displayContainer: document.querySelector(".display-container"),
+  oldLive: document.getElementById("live"),
+  history: document.getElementById("history"),
+  total: document.getElementById("total"),
+  archiveModal: document.getElementById("archive-modal"),
+  archiveList: document.getElementById("archive-list"),
+  copyBtn: document.getElementById("copy-btn")
+};
 
+// Create Custom Input Interface
 let liveWrapper = document.createElement("div");
 liveWrapper.id = "live-wrapper";
+liveWrapper.innerHTML = `
+  <span id="live-input" contenteditable="true" inputmode="none" spellcheck="false"></span>
+  <div id="custom-cursor" class="blinking"></div>
+  <span id="live-total"></span>
+`;
 
-let inputSpan = document.createElement("span");
-inputSpan.id = "live-input";
-inputSpan.setAttribute("contenteditable", "true");
-inputSpan.setAttribute("inputmode", "none"); 
-inputSpan.setAttribute("spellcheck", "false");
+if (DOM.oldLive) DOM.oldLive.replaceWith(liveWrapper);
 
-let customCursor = document.createElement("div");
-customCursor.id = "custom-cursor";
-customCursor.classList.add("blinking");
+const liveInput = document.getElementById("live-input");
+const liveTotal = document.getElementById("live-total");
+const customCursor = document.getElementById("custom-cursor");
 
-let totalSpan = document.createElement("span");
-totalSpan.id = "live-total";
-
-liveWrapper.appendChild(inputSpan);
-liveWrapper.appendChild(customCursor); 
-liveWrapper.appendChild(totalSpan);
-
-if (oldLive) oldLive.replaceWith(liveWrapper);
-
-let historyEl = document.getElementById("history");
-let liveInput = document.getElementById("live-input"); 
-let liveTotal = document.getElementById("live-total"); 
-let totalEl = document.getElementById("total");
-let archiveModal = document.getElementById("archive-modal");
-let archiveList = document.getElementById("archive-list");
-
+// App State
 let tokens = [];
 let activeSessionId = null;
 let lastCaretPos = 0;
-let currentPressedBtn = null; 
-let isProcessing = false; 
+let currentPressedBtn = null;
+let cutTimer = null;
+let isLongPress = false;
 
-function pulse() { if (navigator.vibrate) navigator.vibrate(30); }
+/* =========================================
+   2. INTERACTION ENGINE (The Fix)
+   ========================================= */
 
-// --- CORE INTERACTION HANDLER ---
+function pulse() { 
+  if (navigator.vibrate) navigator.vibrate(30); 
+}
+
+function triggerVisualFeedback(btn) {
+  if (!btn) return;
+  btn.classList.add("pressed");
+  setTimeout(() => btn.classList.remove("pressed"), 100);
+}
+
+// Global Tap Handler (Used by logic functions)
 function tap(fn) { 
-  if (isProcessing) return;
-  isProcessing = true;
-  setTimeout(() => { isProcessing = false; }, 150);
-
-  let result = fn(); 
-  
-  if (result !== false) {
-    pulse(); 
-    if (currentPressedBtn) {
-      let btn = currentPressedBtn;
-      btn.classList.add("pressed");
-      setTimeout(() => btn.classList.remove("pressed"), 100);
-    }
-  }
+  let result = fn();
+  if (result !== false) pulse();
+  triggerVisualFeedback(currentPressedBtn);
   currentPressedBtn = null; 
 }
 
-// --- EVENT LISTENERS ---
+// --- BUTTON HIJACKER ---
+// Converts HTML on-events to fast JS listeners
+document.querySelectorAll('.btn-key').forEach(btn => {
+  // A. Backspace (Custom Logic)
+  if (btn.classList.contains('cut')) {
+    btn.removeAttribute('onpointerdown');
+    btn.removeAttribute('onpointerup');
+    btn.removeAttribute('onpointerleave');
+    
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      currentPressedBtn = btn;
+      isLongPress = false;
+      
+      // Start Long Press Timer
+      cutTimer = setTimeout(() => {
+        if(tokens.length > 0 || liveInput.innerText !== ""){
+          liveInput.innerText = "";
+          parseAndRecalculate(false);
+          pulse();
+          updateCursor();
+          triggerVisualFeedback(btn);
+        }
+        isLongPress = true;
+      }, 450);
+    });
 
-// PWA KEYBOARD FIX: Prevent keyboard popping up on restore
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    liveInput.blur(); 
+    btn.addEventListener('pointerup', (e) => {
+      e.preventDefault();
+      clearTimeout(cutTimer);
+      if (!isLongPress) tap(back);
+    });
+
+    btn.addEventListener('pointerleave', (e) => {
+      e.preventDefault();
+      clearTimeout(cutTimer);
+    });
+    return;
+  }
+
+  // B. Standard Buttons (Num/Op/AC)
+  let command = btn.getAttribute('onclick');
+  if (command) {
+    btn.removeAttribute('onclick'); // Kill ghost clicks
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); // Kill focus stealing
+      currentPressedBtn = btn;
+      try { eval(command); } catch (err) { console.error(err); }
+    });
   }
 });
 
-document.querySelectorAll('.btn-key').forEach(btn => {
-  btn.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); 
-    currentPressedBtn = btn; 
-    btn.click(); 
-  });
-});
+/* =========================================
+   3. INPUT LOGIC
+   ========================================= */
 
-liveWrapper.addEventListener("click", () => {
-  if (document.activeElement !== liveInput) liveInput.focus();
-});
+function ensureFocus() {
+  if (document.activeElement !== liveInput) {
+    liveInput.focus();
+    let range = document.createRange();
+    range.selectNodeContents(liveInput);
+    range.collapse(false);
+    let sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
 
-liveInput.addEventListener("focus", () => {
-  liveWrapper.classList.add("focused");
+function safeInsert(char, type) {
+  ensureFocus();
+  let sel = window.getSelection();
+  if (!sel.rangeCount) return false;
+  let range = sel.getRangeAt(0);
+
+  if (range.startOffset > 0) {
+     let fullTextBefore = liveInput.innerText.substring(0, range.startOffset);
+     let prevChar = fullTextBefore.trim().slice(-1);
+
+     if (type === 'op') {
+       // Operator Logic
+       if (["+", "-", "×", "÷"].includes(prevChar) && char !== "%") { 
+         if (prevChar === char) return false; // Block Duplicate
+         if (fullTextBefore.trim().length === 1 && prevChar === '-') return false; // Keep negative sign
+         
+         // Replace Operator
+         let textNode = range.startContainer;
+         if (textNode.nodeType === 3) { 
+             let opIndex = fullTextBefore.lastIndexOf(prevChar);
+             if (opIndex !== -1) {
+                 let replaceRange = document.createRange();
+                 replaceRange.setStart(textNode, opIndex);
+                 replaceRange.setEnd(textNode, range.startOffset);
+                 sel.removeAllRanges();
+                 sel.addRange(replaceRange);
+             }
+         }
+       }
+     }
+     if (type === 'dot') {
+       let fullText = liveInput.innerText.substring(0, range.startOffset);
+       let lastSegment = fullText.split(/[\+\-\×\÷%]/).pop();
+       if (lastSegment.includes('.')) return false; 
+       if (lastSegment.trim() === "") char = "0.";
+     }
+  } else {
+    // Start of line logic
+    if (type === 'op' && char !== '-') return false; 
+    if (type === 'dot') char = "0.";
+  }
+
+  document.execCommand('insertText', false, char);
+  return true; 
+}
+
+function digit(d){ return safeInsert(d, d === '.' ? 'dot' : 'num'); }
+function setOp(op){ return safeInsert(op, 'op'); }
+
+function back(){
+  ensureFocus();
+  if(liveInput.innerText === "") return false;
+  document.execCommand('delete'); 
+  return true;
+}
+
+function applyPercent(){ 
+  if(!safeInsert("%", 'op')) return false;
+  // If "10%", check Grand Total interaction
+  let rawText = liveInput.innerText.replace(/[, ]/g, "");
+  if (/^[\+\-]?\d+(\.\d+)?%$/.test(rawText)) {
+      let gSum = getGrandSum();
+      if (gSum !== 0) {
+          let gSumStr = formatIN(toBillingString(Math.abs(gSum)));
+          document.execCommand('insertText', false, gSumStr);
+      }
+  }
+  return true; 
+}
+
+function enter(){
+  parseAndRecalculate(false); 
+  if(!tokens.length) return false;
+  
+  let result = evaluate();
+  let row = document.createElement("div");
+  row.className = "h-row"; 
+  row.dataset.value = result; 
+  
+  let expText = liveInput.innerText; 
+  let resText = formatResultForHistory(result); 
+  
+  row.innerHTML = `<span class="h-exp">${expText} =</span><span class="h-res ${result < 0 ? 'negative' : ''}">${resText}</span><div class="swipe-arrow"></div>`;
+  enableSwipe(row); 
+  DOM.history.appendChild(row);
+  
+  liveInput.innerText = ""; 
+  liveTotal.innerText = "";
+  tokens = []; 
+  
+  recalculateGrandTotal();
+  setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+  liveInput.focus();
   updateCursor();
-});
+  return true;
+}
 
-liveInput.addEventListener("blur", () => {
-  liveWrapper.classList.remove("focused");
-});
+/* =========================================
+   4. MATH ENGINE
+   ========================================= */
 
-liveInput.addEventListener("contextmenu", (e) => {
-  e.preventDefault();
-  return false;
-});
-
-// --- HELPER FUNCTIONS ---
 function clean(n){
   if (isNaN(n)) return 0;
   let val = Math.round((n + Number.EPSILON) * 1e12) / 1e12;
   return Math.abs(val) > 1e15 ? val.toExponential(8) : val;
 }
 
+function parseAndRecalculate(resetCursor = true) {
+  let rawText = liveInput.innerText.replace(/[, ]/g, "");
+  let safeText = rawText.replace(/e\+/gi, "EE_PLUS").replace(/e\-/gi, "EE_MINUS");
+  let parts = safeText.split(/([\+\-\×\÷])/).map(p => p.trim()).filter(p => p);
+  
+  let rawTokens = parts.map(part => {
+    let restored = part.replace(/EE_PLUS/g, "e+").replace(/EE_MINUS/g, "e-");
+    if (["+", "-", "×", "÷"].includes(restored)) return restored;
+    
+    if (restored.includes("%")) {
+      let percentIndex = restored.lastIndexOf("%");
+      let suffix = restored.substring(percentIndex + 1);
+      
+      // Case: 10%50 -> 10% * 50
+      if (suffix.length > 0 && !isNaN(parseFloat(suffix))) {
+         let prefix = restored.substring(0, percentIndex);
+         let pCount = (prefix.match(/%/g) || []).length + 1; 
+         let numVal = parseFloat(prefix.replace(/%/g, ""));
+         let suffixVal = parseFloat(suffix);
+         let val = numVal;
+         for(let k=0; k<pCount; k++) val = val / 100;
+         return { text: restored, value: clean(val * suffixVal), isPercent: true };
+      }
+
+      // Case: 10%
+      let percentCount = (restored.match(/%/g) || []).length;
+      let num = parseFloat(restored.replace(/%/g, ""));
+      let val = num;
+      for(let k=0; k<percentCount; k++) val = val / 100;
+      return { text: restored, value: clean(val), isPercent: true, rawNum: num, count: percentCount };
+    }
+    return restored;
+  });
+
+  tokens = [];
+  for (let i = 0; i < rawTokens.length; i++) {
+    let t = rawTokens[i];
+    if (typeof t === "object" && t.isPercent) {
+      let calculatedValue = t.value; 
+      let nextToken = rawTokens[i + 1];
+      let isNextScale = ["×", "÷", "*", "/"].includes(nextToken);
+
+      if (t.count === 1 && !t.text.includes('%') ) { /*noop*/ } 
+      else if (t.count === 1) {
+          let percentVal = t.rawNum;
+          if (isNextScale) {
+             calculatedValue = clean(percentVal / 100);
+          } else if (i === 0 || (i === 1 && rawTokens[0] === "-")) {
+            let gSum = getGrandSum();
+            if (gSum !== 0) calculatedValue = clean(Math.abs(gSum) * (percentVal / 100));
+          } else if (i > 1) {
+            let op = rawTokens[i - 1]; 
+            if (op === "+" || op === "-") {
+               let subExprTokens = tokens.slice(0, tokens.length - 1); 
+               let runningTotal = evaluate(subExprTokens);
+               calculatedValue = clean(Math.abs(runningTotal) * (percentVal / 100));
+            }
+          }
+      }
+      t.value = calculatedValue;
+      tokens.push(t);
+    } else {
+      tokens.push(t);
+    }
+  }
+
+  let currentEval = evaluate();
+  liveTotal.innerText = tokens.length > 0 ? `= ${formatIN(toBillingString(currentEval))}` : "";
+}
+
+function evaluate(sourceTokens = tokens){
+  let tempTokens = [...sourceTokens]; 
+  while (tempTokens.length > 0 && ["+", "-", "×", "÷"].includes(tempTokens.at(-1))) { tempTokens.pop(); }
+  if (tempTokens.length === 0) return 0;
+  
+  let exp = tempTokens.map(t => (typeof t === "object" ? t.value : t))
+    .join(" ").replace(/×/g, "*").replace(/÷/g, "/");
+    
+  try { return clean(new Function("return " + exp)()); } catch { return 0; }
+}
+
+/* =========================================
+   5. FORMATTING & HELPERS
+   ========================================= */
+
 function toBillingString(val) {
   let n = Number(val);
-  if (Math.abs(n) >= 1e15) return n.toExponential(8); 
-  return n.toFixed(2);
+  return Math.abs(n) >= 1e15 ? n.toExponential(8) : n.toFixed(2);
 }
 
 function formatIN(str){
@@ -117,20 +332,14 @@ function formatIN(str){
   let [i, d] = String(str).split("."); 
   let sign = i.startsWith("-") ? "-" : "";
   i = i.replace(/[^0-9]/g, ""); 
-  
   let last3 = i.slice(-3), rest = i.slice(0, -3);
   if(rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
-  
   return sign + (rest ? rest + "," : "") + last3 + (d !== undefined ? "." + d : "");
 }
 
 function formatResultForHistory(val) {
-  let cleanVal = toBillingString(val);
-  let formatted = formatIN(cleanVal);
-  if (formatted.length > 13) {
-    return Number(val).toExponential(6);
-  }
-  return formatted;
+  let formatted = formatIN(toBillingString(val));
+  return formatted.length > 13 ? Number(val).toExponential(6) : formatted;
 }
 
 function getGrandSum() {
@@ -142,7 +351,22 @@ function getGrandSum() {
   return clean(sum);
 }
 
-// --- CURSOR & FORMATTING ENGINE ---
+function formatEquation(rawText) {
+  let safe = rawText.replace(/e\+/gi, "__EP__").replace(/e\-/gi, "__EM__");
+  let parts = safe.split(/([\+\-\×\÷%])/);
+  return parts.map(part => {
+    let restored = part.replace(/__EP__/g, "e+").replace(/__EM__/g, "e-");
+    if (["+", "-", "×", "÷", "%"].includes(restored)) return ` ${restored} `;
+    if (/^[0-9.,]+$/.test(restored) && !restored.toLowerCase().includes('e')) {
+      return formatIN(restored.replace(/,/g, ""));
+    }
+    return restored;
+  }).join("");
+}
+
+/* =========================================
+   6. UI & CURSOR ENGINE
+   ========================================= */
 
 function updateCursor() {
   let sel = window.getSelection();
@@ -151,100 +375,47 @@ function updateCursor() {
     lastCaretPos = range.startOffset; 
     
     let rects = range.getClientRects();
+    let rect, wrapperRect = liveWrapper.getBoundingClientRect();
+
     if (rects.length === 0) {
        let tempSpan = document.createElement("span");
        tempSpan.textContent = "\u200b"; 
        range.insertNode(tempSpan);
-       let tempRect = tempSpan.getBoundingClientRect();
+       rect = tempSpan.getBoundingClientRect();
        tempSpan.remove();
-       
-       let wrapperRect = liveWrapper.getBoundingClientRect();
-       customCursor.style.left = (tempRect.left - wrapperRect.left + liveWrapper.scrollLeft) + "px";
-       customCursor.style.top = (tempRect.top - wrapperRect.top + liveWrapper.scrollTop) + "px";
-       customCursor.style.height = tempRect.height + "px";
     } else {
-       let rect = rects[0]; 
-       let wrapperRect = liveWrapper.getBoundingClientRect();
-       customCursor.style.left = (rect.left - wrapperRect.left + liveWrapper.scrollLeft) + "px";
-       customCursor.style.top = (rect.top - wrapperRect.top + liveWrapper.scrollTop) + "px";
-       customCursor.style.height = rect.height + "px";
-    }
-  }
-}
-
-document.addEventListener('selectionchange', () => {
-  if (document.activeElement !== liveInput) return;
-  let sel = window.getSelection();
-  if (!sel.rangeCount) return;
-  let range = sel.getRangeAt(0);
-  let currentPos = range.startOffset;
-  
-  if (currentPos > 0) {
-     let rangeClone = range.cloneRange();
-     rangeClone.setStart(range.startContainer, currentPos - 1);
-     
-     let char = rangeClone.toString();
-     if (char === "," || char === " ") {
-        if (currentPos > lastCaretPos) {
-           if (currentPos < liveInput.innerText.length) {
-             range.setStart(range.startContainer, currentPos + 1);
-             range.setEnd(range.startContainer, currentPos + 1);
-             sel.removeAllRanges();
-             sel.addRange(range);
-           }
-        } else {
-           range.setStart(range.startContainer, currentPos - 1);
-           range.setEnd(range.startContainer, currentPos - 1);
-           sel.removeAllRanges();
-           sel.addRange(range);
-        }
-     }
-  }
-  updateCursor();
-});
-
-function formatEquation(rawText) {
-  let safe = rawText.replace(/e\+/gi, "__EP__").replace(/e\-/gi, "__EM__");
-  
-  let parts = safe.split(/([\+\-\×\÷%])/);
-  return parts.map(part => {
-    let restored = part.replace(/__EP__/g, "e+").replace(/__EM__/g, "e-");
-    
-    if (["+", "-", "×", "÷", "%"].includes(restored)) {
-      return ` ${restored} `;
+       rect = rects[0]; 
     }
     
-    if (/^[0-9.,]+$/.test(restored) && !restored.toLowerCase().includes('e')) {
-      return formatIN(restored.replace(/,/g, ""));
-    }
-    return restored;
-  }).join("");
+    customCursor.style.left = (rect.left - wrapperRect.left + liveWrapper.scrollLeft) + "px";
+    customCursor.style.top = (rect.top - wrapperRect.top + liveWrapper.scrollTop) + "px";
+    customCursor.style.height = rect.height + "px";
+  }
 }
 
 function handleInput() {
   let originalText = liveInput.innerText;
   
+  // Save cursor position relative to meaningful chars
   let sel = window.getSelection();
   let range = sel.getRangeAt(0);
   let preCaretRange = range.cloneRange();
   preCaretRange.selectNodeContents(liveInput);
   preCaretRange.setEnd(range.endContainer, range.endOffset);
-  let textBeforeCaret = preCaretRange.toString();
-  
-  let meaningfulIndex = textBeforeCaret.replace(/[, ]/g, "").length;
+  let meaningfulIndex = preCaretRange.toString().replace(/[, ]/g, "").length;
 
+  // Format Text
   let rawText = originalText.replace(/[, ]/g, ""); 
   let formattedText = formatEquation(rawText);
   
   if (originalText !== formattedText) {
     liveInput.innerText = formattedText;
     
-    let charCount = 0;
-    let newOffset = 0;
+    // Restore Cursor
+    let charCount = 0, newOffset = 0;
     for (let i = 0; i < formattedText.length; i++) {
       let char = formattedText[i];
       if (char !== "," && char !== " ") charCount++;
-      
       if (charCount === meaningfulIndex && char !== "," && char !== " ") {
         newOffset = i + 1;
         break;
@@ -265,227 +436,58 @@ function handleInput() {
   }
 
   parseAndRecalculate(false);
-  
   requestAnimationFrame(() => {
     liveWrapper.scrollTop = liveWrapper.scrollHeight;
     updateCursor();
   });
 }
 
-function ensureFocus() {
-  if (document.activeElement !== liveInput) {
-    liveInput.focus();
-    let range = document.createRange();
-    range.selectNodeContents(liveInput);
-    range.collapse(false);
-    let sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-}
-
-// --- LOGIC FUNCTIONS (Replacement + Smart Dot) ---
-function safeInsert(char, type) {
-  ensureFocus();
-  let sel = window.getSelection();
-  if (!sel.rangeCount) return false;
-  let range = sel.getRangeAt(0);
-
-  if (range.startOffset > 0) {
-     let fullTextBefore = liveInput.innerText.substring(0, range.startOffset);
-     // Ignore spaces for logic checks
-     let prevChar = fullTextBefore.trim().slice(-1);
-
-     if (type === 'op') {
-       if (["+", "-", "×", "÷"].includes(prevChar) && char !== "%") { 
-         
-         // 1. Block duplicate
-         if (prevChar === char) return false; 
-         
-         // 2. Block replacing initial negative sign
-         if (fullTextBefore.trim().length === 1 && prevChar === '-') return false; 
-         
-         // 3. REPLACEMENT LOGIC
-         let textNode = range.startContainer;
-         if (textNode.nodeType === 3) { 
-             let opIndex = fullTextBefore.lastIndexOf(prevChar);
-             if (opIndex !== -1) {
-                 let replaceRange = document.createRange();
-                 replaceRange.setStart(textNode, opIndex);
-                 replaceRange.setEnd(textNode, range.startOffset);
-                 sel.removeAllRanges();
-                 sel.addRange(replaceRange);
-                 // Fall through to insertText will now REPLACE
-             }
-         }
-       }
-     }
-     if (type === 'dot') {
-       let fullText = liveInput.innerText.substring(0, range.startOffset);
-       let lastSegment = fullText.split(/[\+\-\×\÷%]/).pop();
-       
-       if (lastSegment.includes('.')) return false; 
-       
-       // Smart Dot: Start with 0.
-       if (lastSegment.trim() === "") {
-         char = "0.";
-       }
-     }
-  } else {
-    if (type === 'op' && char !== '-') return false; 
-    if (type === 'dot') char = "0.";
-  }
-
-  document.execCommand('insertText', false, char);
-  return true; 
-}
-
-function digit(d){ return safeInsert(d, d === '.' ? 'dot' : 'num'); }
-function setOp(op){ return safeInsert(op, 'op'); }
-
-function applyPercent(){ 
-  if(!safeInsert("%", 'op')) return false;
-  let rawText = liveInput.innerText.replace(/[, ]/g, "");
-  if (/^[\+\-]?\d+(\.\d+)?%$/.test(rawText)) {
-      let gSum = getGrandSum();
-      if (gSum !== 0) {
-          let gSumStr = formatIN(toBillingString(Math.abs(gSum)));
-          document.execCommand('insertText', false, gSumStr);
-      }
-  }
-  return true; 
-}
-
-function back(){
-  ensureFocus();
-  if(liveInput.innerText === "") return false;
-  document.execCommand('delete'); 
-  return true;
-}
-
-// --- CORE LOGIC (Smart Percent Update) ---
-function parseAndRecalculate(resetCursor = true) {
-  let rawText = liveInput.innerText.replace(/[, ]/g, "");
-  
-  let safeText = rawText.replace(/e\+/gi, "EE_PLUS").replace(/e\-/gi, "EE_MINUS");
-  
-  let parts = safeText.split(/([\+\-\×\÷])/).map(p => p.trim()).filter(p => p);
-  
-  let rawTokens = parts.map(part => {
-    let restored = part.replace(/EE_PLUS/g, "e+").replace(/EE_MINUS/g, "e-");
-    
-    if (["+", "-", "×", "÷"].includes(restored)) return restored;
-    
-    if (restored.includes("%")) {
-      let percentIndex = restored.lastIndexOf("%");
-      let suffix = restored.substring(percentIndex + 1);
-      
-      if (suffix.length > 0 && !isNaN(parseFloat(suffix))) {
-         let prefix = restored.substring(0, percentIndex);
-         let pCount = (prefix.match(/%/g) || []).length + 1; 
-         let numVal = parseFloat(prefix.replace(/%/g, ""));
-         let suffixVal = parseFloat(suffix);
-         
-         let val = numVal;
-         for(let k=0; k<pCount; k++) val = val / 100;
-         val = val * suffixVal;
-         
-         return { text: restored, value: clean(val), isPercent: true };
-      }
-
-      let percentCount = (restored.match(/%/g) || []).length;
-      let numStr = restored.replace(/%/g, "");
-      let num = parseFloat(numStr);
-      let val = num;
-      for(let k=0; k<percentCount; k++) val = val / 100;
-      return { text: restored, value: clean(val), isPercent: true, rawNum: num, count: percentCount };
-    }
-    return restored;
-  });
-
-  tokens = [];
-  for (let i = 0; i < rawTokens.length; i++) {
-    let t = rawTokens[i];
-    if (typeof t === "object" && t.isPercent) {
-      let calculatedValue = t.value; 
-      
-      // NEW: Check for next multiplication
-      let nextToken = rawTokens[i + 1];
-      let isNextScale = ["×", "÷", "*", "/"].includes(nextToken);
-
-      if (t.count === 1 && !t.text.includes('%') ) { 
-      } else if (t.count === 1) {
-          let percentVal = t.rawNum;
-          
-          // 1. If followed by ×/÷, it's a raw ratio (0.1)
-          if (isNextScale) {
-             calculatedValue = clean(percentVal / 100);
-          }
-          // 2. Start of line? Use Grand Total
-          else if (i === 0 || (i === 1 && rawTokens[0] === "-")) {
-            let gSum = getGrandSum();
-            if (gSum !== 0) calculatedValue = clean(Math.abs(gSum) * (percentVal / 100));
-          } 
-          // 3. Middle? Use Previous Number
-          else if (i > 1) {
-            let op = rawTokens[i - 1]; 
-            if (op === "+" || op === "-") {
-               let subExprTokens = tokens.slice(0, tokens.length - 1); 
-               let runningTotal = evaluate(subExprTokens);
-               calculatedValue = clean(Math.abs(runningTotal) * (percentVal / 100));
-            }
-          }
-      }
-      t.value = calculatedValue;
-      tokens.push(t);
-    } else {
-      tokens.push(t);
-    }
-  }
-
-  let currentEval = evaluate();
-  if (tokens.length > 0) {
-    liveTotal.innerText = `= ${formatIN(toBillingString(currentEval))}`;
-  } else {
-    liveTotal.innerText = "";
-  }
-}
-
-function evaluate(sourceTokens = tokens){
-  let tempTokens = [...sourceTokens]; 
-  while (tempTokens.length > 0 && ["+", "-", "×", "÷"].includes(tempTokens.at(-1))) { tempTokens.pop(); }
-  if (tempTokens.length === 0) return 0;
-  
-  let exp = tempTokens.map(t => (typeof t === "object" ? t.value : t))
-    .join(" ")
-    .replace(/×/g, "*")
-    .replace(/÷/g, "/");
-    
-  try { return clean(new Function("return " + exp)()); } catch { return 0; }
-}
-
+// Event Listeners for UI
 liveInput.addEventListener("input", handleInput);
 liveInput.addEventListener("paste", (e) => e.preventDefault()); 
+liveWrapper.addEventListener("click", () => { if (document.activeElement !== liveInput) liveInput.focus(); });
+liveInput.addEventListener("focus", () => { liveWrapper.classList.add("focused"); updateCursor(); });
+liveInput.addEventListener("blur", () => { liveWrapper.classList.remove("focused"); });
+liveInput.addEventListener("contextmenu", (e) => { e.preventDefault(); return false; });
+document.addEventListener('selectionchange', () => { if (document.activeElement === liveInput) updateCursor(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) liveInput.blur(); });
 
-// --- APP & DATA ---
+// Keyboard Support
+document.addEventListener('keydown', (e) => {
+  if (DOM.archiveModal.style.display === "block") { if (e.key === 'Escape') closeArchive(); return; }
+  const key = e.key; const ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl && key.toLowerCase() === 'p') { e.preventDefault(); tap(() => window.print()); } 
+  else if (ctrl && key.toLowerCase() === 'c') { e.preventDefault(); tap(copyToClipboard); } 
+  else if (key.toLowerCase() === 'h') { tap(showArchive); } 
+  else if (/[0-9.]/.test(key)) { tap(() => digit(key)); e.preventDefault(); } 
+  else if (key === '+') { tap(() => setOp('+')); e.preventDefault(); } 
+  else if (key === '-') { tap(() => setOp('-')); e.preventDefault(); } 
+  else if (key === '*' || key.toLowerCase() === 'x') { tap(() => setOp('×')); e.preventDefault(); } 
+  else if (key === '/') { tap(() => setOp('÷')); e.preventDefault(); } 
+  else if (key === '%') { tap(applyPercent); e.preventDefault(); } 
+  else if (key === 'Enter' || key === '=') { e.preventDefault(); tap(enter); } 
+  else if (key === 'Escape' || key === 'Delete') { tap(clearAll); }
+});
+
+/* =========================================
+   7. DATA & HISTORY MANAGEMENT
+   ========================================= */
+
 function recalculateGrandTotal(){
   let sum = getGrandSum();
   let displaySum = toBillingString(sum);
-  totalEl.innerText = formatIN(displaySum);
-  historyEl.setAttribute('data-total', totalEl.innerText);
+  DOM.total.innerText = formatIN(displaySum);
+  DOM.history.setAttribute('data-total', DOM.total.innerText);
   
   let isNeg = sum < 0;
-  totalEl.classList.toggle("negative", isNeg);
-  
-  // Update Label Dot Color
+  DOM.total.classList.toggle("negative", isNeg);
   let label = document.querySelector(".total-label");
   if(label) label.classList.toggle("is-negative", isNeg);
-  
   saveToLocal();
 }
 
 function saveToLocal() { 
-  localStorage.setItem("billing_calc_history", historyEl.innerHTML); 
+  localStorage.setItem("billing_calc_history", DOM.history.innerHTML); 
   localStorage.setItem("active_session_id", activeSessionId || "");
 }
 
@@ -493,39 +495,34 @@ function loadFromLocal() {
   const saved = localStorage.getItem("billing_calc_history");
   activeSessionId = localStorage.getItem("active_session_id") || null;
   if(saved) {
-    historyEl.innerHTML = saved;
+    DOM.history.innerHTML = saved;
     document.querySelectorAll(".h-row").forEach(enableSwipe);
     recalculateGrandTotal();
   }
 }
 
 function clearAll(){
-  let hasContent = tokens.length > 0 || historyEl.innerHTML.trim() !== "";
+  let hasContent = tokens.length > 0 || DOM.history.innerHTML.trim() !== "";
   if(!hasContent) return false; 
+  if (navigator.vibrate) navigator.vibrate(85); 
   
-  if(historyEl.innerHTML.trim()) {
+  if(DOM.history.innerHTML.trim()) {
     let archive = JSON.parse(localStorage.getItem("calc_archive") || "[]");
     const ts = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
     let rowsData = [];
     document.querySelectorAll(".h-row").forEach(row => { 
         rowsData.push({ exp: row.querySelector(".h-exp").innerText, res: row.querySelector(".h-res").innerText, val: Number(row.dataset.value) }); 
     });
-    let sessionData = { id: activeSessionId || Date.now(), time: ts, data: rowsData, total: totalEl.innerText, rawTotal: getGrandSum() };
+    let sessionData = { id: activeSessionId || Date.now(), time: ts, data: rowsData, total: DOM.total.innerText, rawTotal: getGrandSum() };
     if (activeSessionId) archive = archive.filter(item => item.id != activeSessionId);
     archive.unshift(sessionData);
     if(archive.length > 20) archive.pop();
     localStorage.setItem("calc_archive", JSON.stringify(archive));
   }
   
-  tokens = []; 
-  liveInput.innerText = ""; 
-  liveTotal.innerText = "";
-  historyEl.innerHTML = ""; 
-  activeSessionId = null; 
-  recalculateGrandTotal();
-  liveInput.focus();
-  updateCursor();
-  return true;
+  tokens = []; liveInput.innerText = ""; liveTotal.innerText = ""; DOM.history.innerHTML = ""; activeSessionId = null; 
+  recalculateGrandTotal(); liveInput.focus(); updateCursor();
+  return false;
 }
 
 function restoreSession(index) {
@@ -533,26 +530,24 @@ function restoreSession(index) {
   const session = archive[index];
   if (!session) return;
   
-  tokens = []; liveInput.innerText = ""; liveTotal.innerText = ""; historyEl.innerHTML = ""; activeSessionId = null;
-  
-  activeSessionId = session.id;
+  tokens = []; liveInput.innerText = ""; liveTotal.innerText = ""; DOM.history.innerHTML = ""; activeSessionId = session.id;
   session.data.forEach(rowData => {
     let row = document.createElement("div");
     row.className = "h-row";
     row.dataset.value = rowData.val;
     row.innerHTML = `<span class="h-exp">${rowData.exp}</span><span class="h-res ${rowData.val < 0 ? 'negative' : ''}">${rowData.res}</span><div class="swipe-arrow"></div>`;
     enableSwipe(row);
-    historyEl.appendChild(row);
+    DOM.history.appendChild(row);
   });
   recalculateGrandTotal(); closeArchive(); pulse();
 }
 
 function showArchive() {
   const archive = JSON.parse(localStorage.getItem("calc_archive") || "[]");
-  archiveList.innerHTML = archive.length === 0 ? "<div style='text-align:center; padding:40px; color:#999;'>No history records found</div>" : "";
+  DOM.archiveList.innerHTML = archive.length === 0 ? "<div style='text-align:center; padding:40px; color:#999;'>No history records found</div>" : "";
   archive.forEach((item, idx) => {
     let rowsHtml = item.data.map(row => `<div class="archive-data-row"><span style="color:#666; flex:1; text-align:left;">${row.exp}</span><span class="${row.val < 0 ? 'negative' : ''}" style="font-weight:600;">${row.res}</span></div>`).join("");
-    archiveList.innerHTML += `
+    DOM.archiveList.innerHTML += `
       <div class="archive-item">
         <div class="h-card-actions archive-header-strip">
           <span class="h-time">${item.time} ${activeSessionId == item.id ? '<b style="color:#2e7d32;">(EDITING)</b>' : ''}</span>
@@ -564,104 +559,28 @@ function showArchive() {
         <div class="archive-total-row"><span>TOTAL</span><span class="${item.rawTotal < 0 ? 'negative' : ''}">₹${item.total}</span></div>
       </div>`;
   });
-  archiveModal.style.display = "block"; window.history.pushState({ modal: "archive" }, "");
+  DOM.archiveModal.style.display = "block"; window.history.pushState({ modal: "archive" }, "");
   return true; 
 }
 
-function enter(){
-  parseAndRecalculate(false); 
-  if(!tokens.length) return false;
-  let result = evaluate();
-  let row = document.createElement("div");
-  row.className = "h-row"; row.dataset.value = result; 
-  
-  let expText = liveInput.innerText; 
-  let resText = formatResultForHistory(result); 
-  
-  row.innerHTML = `<span class="h-exp">${expText} =</span><span class="h-res ${result < 0 ? 'negative' : ''}">${resText}</span><div class="swipe-arrow"></div>`;
-  enableSwipe(row); historyEl.appendChild(row);
-  
-  liveInput.innerText = ""; 
-  liveTotal.innerText = "";
-  tokens = []; 
-  
-  recalculateGrandTotal();
-  setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
-  liveInput.focus();
-  updateCursor();
-  return true;
-}
-
 function restoreToLive(row) {
-  let expText = row.querySelector(".h-exp").innerText;
-  let cleanText = expText.replace(/=/g, "").replace(/,/g, "").trim();
-  
+  let cleanText = row.querySelector(".h-exp").innerText.replace(/=/g, "").replace(/,/g, "").trim();
   liveInput.innerText = cleanText;
-  handleInput(); 
-  liveInput.focus();
+  handleInput(); liveInput.focus();
+  
   let range = document.createRange();
-  let sel = window.getSelection();
   range.selectNodeContents(liveInput);
   range.collapse(false);
+  let sel = window.getSelection();
   sel.removeAllRanges();
   sel.addRange(range);
 
   pulse();
   setTimeout(() => {
-    row.style.height = "0px";
-    row.style.margin = "0px";
-    row.style.opacity = "0";
+    row.style.height = "0px"; row.style.margin = "0px"; row.style.opacity = "0";
     setTimeout(() => { row.remove(); recalculateGrandTotal(); }, 300);
   }, 300);
 }
-
-let cutTimer = null, cutLong = false;
-function cutPressStart(e){ 
-  cutLong = false; 
-  cutTimer = setTimeout(()=>{ 
-    // LONG PRESS
-    if(tokens.length > 0 || liveInput.innerText !== ""){ 
-      liveInput.innerText = ""; 
-      parseAndRecalculate(false); 
-      pulse(); 
-      updateCursor(); 
-      if(e.target) {
-         e.target.classList.add("pressed"); 
-         setTimeout(()=>e.target.classList.remove("pressed"), 100);
-      }
-    } 
-    cutLong = true; 
-  }, 450); 
-}
-function cutPressEnd(e){ 
-  clearTimeout(cutTimer); 
-  if(!cutLong) { 
-    tap(back); 
-  } 
-}
-function cutPressCancel(){ clearTimeout(cutTimer); }
-
-// Make global for inline HTML
-window.cutPressStart = cutPressStart;
-window.cutPressEnd = cutPressEnd;
-window.cutPressCancel = cutPressCancel;
-window.closeArchive = closeArchive;
-window.restoreSession = restoreSession;
-
-function copyToClipboard() {
-  const history = document.querySelectorAll(".h-row");
-  if (history.length === 0) return false;
-  let text = "SUMMARY\n\n";
-  history.forEach(row => { text += `${row.querySelector(".h-exp").innerText} ${row.querySelector(".h-res").innerText}\n`; });
-  text += `\nGRAND TOTAL: ₹${totalEl.innerText}`;
-  if (navigator.clipboard) { navigator.clipboard.writeText(text); }
-  const btn = document.getElementById('copy-btn');
-  if(btn) { btn.classList.add('success'); setTimeout(() => btn.classList.remove('success'), 400); }
-  return true;
-}
-function clearArchive() { if (!confirm("Delete all history?")) return; localStorage.removeItem("calc_archive"); showArchive(); pulse(); }
-function closeArchive() { archiveModal.style.display = "none"; if (window.history.state?.modal === "archive") window.history.back(); }
-window.onpopstate = () => { if (archiveModal.style.display === "block") archiveModal.style.display = "none"; };
 
 function enableSwipe(row){
   let sx = 0, dx = 0, dragging = false;
@@ -707,27 +626,14 @@ function enableSwipe(row){
   });
 }
 
+// Global Exports
+window.closeArchive = () => { DOM.archiveModal.style.display = "none"; if (window.history.state?.modal === "archive") window.history.back(); };
+window.restoreSession = restoreSession;
+window.onpopstate = () => { if (DOM.archiveModal.style.display === "block") DOM.archiveModal.style.display = "none"; };
+window.clearArchive = clearArchive;
+
+// Init
+const resizeObserver = new ResizeObserver(() => { DOM.history.scrollTop = DOM.history.scrollHeight; });
+resizeObserver.observe(liveWrapper);
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
 loadFromLocal();
-
-document.addEventListener('keydown', (e) => {
-  if (archiveModal.style.display === "block") { if (e.key === 'Escape') closeArchive(); return; }
-  const key = e.key; const ctrl = e.ctrlKey || e.metaKey;
-  if (ctrl && key.toLowerCase() === 'p') { e.preventDefault(); tap(() => window.print()); } 
-  else if (ctrl && key.toLowerCase() === 'c') { e.preventDefault(); tap(copyToClipboard); } 
-  else if (key.toLowerCase() === 'h') { tap(showArchive); } 
-  else if (/[0-9.]/.test(key)) { tap(() => digit(key)); e.preventDefault(); } 
-  else if (key === '+') { tap(() => setOp('+')); e.preventDefault(); } 
-  else if (key === '-') { tap(() => setOp('-')); e.preventDefault(); } 
-  else if (key === '*' || key.toLowerCase() === 'x') { tap(() => setOp('×')); e.preventDefault(); } 
-  else if (key === '/') { tap(() => setOp('÷')); e.preventDefault(); } 
-  else if (key === '%') { tap(applyPercent); e.preventDefault(); } 
-  else if (key === 'Enter' || key === '=') { e.preventDefault(); tap(enter); } 
-  else if (key === 'Backspace') { /* Native backspace */ } 
-  else if (key === 'Escape' || key === 'Delete') { tap(clearAll); }
-});
-
-const resizeObserver = new ResizeObserver(() => {
-  historyEl.scrollTop = historyEl.scrollHeight;
-});
-resizeObserver.observe(liveWrapper);
