@@ -637,3 +637,8 @@ const resizeObserver = new ResizeObserver(() => { DOM.history.scrollTop = DOM.hi
 resizeObserver.observe(liveWrapper);
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
 loadFromLocal();
+
+setTimeout(() => {
+  ensureFocus();
+  updateCursor();
+}, 50);
