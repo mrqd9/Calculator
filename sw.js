@@ -1,4 +1,4 @@
-const CACHE_NAME = "adding-calculator-pro-v1.0.1";
+const CACHE_NAME = "adding-calculator-pro-v1.0.2";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
