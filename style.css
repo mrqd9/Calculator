@@ -209,6 +209,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
   letter-spacing: 0.5px;
   flex: 1;
   text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  transition: font-size 0.1s ease;
 }
 
 .total-amount.negative { 
