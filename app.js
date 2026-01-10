@@ -17,11 +17,11 @@ const DOM = {
   copyBtn: document.getElementById("copy-btn")
 };
 
-// Create Custom Input Interface
+// Create Custom Input Interface (Buttons Only Mode)
 let liveWrapper = document.createElement("div");
 liveWrapper.id = "live-wrapper";
 liveWrapper.innerHTML = `
-  <span id="live-input" contenteditable="true" inputmode="none" spellcheck="false"></span>
+  <span id="live-input" contenteditable="true" inputmode="none" spellcheck="false" autocomplete="off"></span>
   <div id="custom-cursor" class="blinking"></div>
   <span id="live-total"></span>
 `;
@@ -41,7 +41,7 @@ let cutTimer = null;
 let isLongPress = false;
 
 /* =========================================
-   2. INTERACTION ENGINE (The Fix)
+   2. INTERACTION ENGINE
    ========================================= */
 
 function pulse() { 
@@ -54,7 +54,6 @@ function triggerVisualFeedback(btn) {
   setTimeout(() => btn.classList.remove("pressed"), 100);
 }
 
-// Global Tap Handler (Used by logic functions)
 function tap(fn) { 
   let result = fn();
   if (result !== false) pulse();
@@ -62,10 +61,9 @@ function tap(fn) {
   currentPressedBtn = null; 
 }
 
-// --- BUTTON HIJACKER ---
-// Converts HTML on-events to fast JS listeners
+// Convert HTML buttons to fast JS listeners
 document.querySelectorAll('.btn-key').forEach(btn => {
-  // A. Backspace (Custom Logic)
+  // A. Backspace (Long Press Logic)
   if (btn.classList.contains('cut')) {
     btn.removeAttribute('onpointerdown');
     btn.removeAttribute('onpointerup');
@@ -76,7 +74,6 @@ document.querySelectorAll('.btn-key').forEach(btn => {
       currentPressedBtn = btn;
       isLongPress = false;
       
-      // Start Long Press Timer
       cutTimer = setTimeout(() => {
         if(tokens.length > 0 || liveInput.innerText !== ""){
           liveInput.innerText = "";
@@ -102,12 +99,12 @@ document.querySelectorAll('.btn-key').forEach(btn => {
     return;
   }
 
-  // B. Standard Buttons (Num/Op/AC)
+  // B. Standard Buttons
   let command = btn.getAttribute('onclick');
   if (command) {
-    btn.removeAttribute('onclick'); // Kill ghost clicks
+    btn.removeAttribute('onclick'); 
     btn.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); // Kill focus stealing
+      e.preventDefault();
       currentPressedBtn = btn;
       try { eval(command); } catch (err) { console.error(err); }
     });
@@ -141,12 +138,10 @@ function safeInsert(char, type) {
      let prevChar = fullTextBefore.trim().slice(-1);
 
      if (type === 'op') {
-       // Operator Logic
        if (["+", "-", "×", "÷"].includes(prevChar) && char !== "%") { 
-         if (prevChar === char) return false; // Block Duplicate
-         if (fullTextBefore.trim().length === 1 && prevChar === '-') return false; // Keep negative sign
+         if (prevChar === char) return false;
+         if (fullTextBefore.trim().length === 1 && prevChar === '-') return false;
          
-         // Replace Operator
          let textNode = range.startContainer;
          if (textNode.nodeType === 3) { 
              let opIndex = fullTextBefore.lastIndexOf(prevChar);
@@ -167,7 +162,6 @@ function safeInsert(char, type) {
        if (lastSegment.trim() === "") char = "0.";
      }
   } else {
-    // Start of line logic
     if (type === 'op' && char !== '-') return false; 
     if (type === 'dot') char = "0.";
   }
@@ -188,7 +182,6 @@ function back(){
 
 function applyPercent(){ 
   if(!safeInsert("%", 'op')) return false;
-  // If "10%", check Grand Total interaction
   let rawText = liveInput.innerText.replace(/[, ]/g, "");
   if (/^[\+\-]?\d+(\.\d+)?%$/.test(rawText)) {
       let gSum = getGrandSum();
@@ -228,13 +221,13 @@ function enter(){
 }
 
 /* =========================================
-   4. MATH ENGINE
+   4. MATH ENGINE (1e20 Limit)
    ========================================= */
 
 function clean(n){
   if (isNaN(n)) return 0;
   let val = Math.round((n + Number.EPSILON) * 1e12) / 1e12;
-  return Math.abs(val) > 1e15 ? val.toExponential(8) : val;
+  return Math.abs(val) > 1e20 ? val.toExponential(8) : val;
 }
 
 function parseAndRecalculate(resetCursor = true) {
@@ -250,7 +243,6 @@ function parseAndRecalculate(resetCursor = true) {
       let percentIndex = restored.lastIndexOf("%");
       let suffix = restored.substring(percentIndex + 1);
       
-      // Case: 10%50 -> 10% * 50
       if (suffix.length > 0 && !isNaN(parseFloat(suffix))) {
          let prefix = restored.substring(0, percentIndex);
          let pCount = (prefix.match(/%/g) || []).length + 1; 
@@ -261,7 +253,6 @@ function parseAndRecalculate(resetCursor = true) {
          return { text: restored, value: clean(val * suffixVal), isPercent: true };
       }
 
-      // Case: 10%
       let percentCount = (restored.match(/%/g) || []).length;
       let num = parseFloat(restored.replace(/%/g, ""));
       let val = num;
@@ -324,7 +315,7 @@ function evaluate(sourceTokens = tokens){
 
 function toBillingString(val) {
   let n = Number(val);
-  return Math.abs(n) >= 1e15 ? n.toExponential(8) : n.toFixed(2);
+  return Math.abs(n) >= 1e20 ? n.toExponential(8) : n.toFixed(2);
 }
 
 function formatIN(str){
@@ -339,7 +330,7 @@ function formatIN(str){
 
 function formatResultForHistory(val) {
   let formatted = formatIN(toBillingString(val));
-  return formatted.length > 13 ? Number(val).toExponential(6) : formatted;
+  return formatted.length > 18 ? Number(val).toExponential(8) : formatted;
 }
 
 function getGrandSum() {
@@ -365,15 +356,38 @@ function formatEquation(rawText) {
 }
 
 /* =========================================
-   6. UI & CURSOR ENGINE
+   6. UI & CURSOR ENGINE (Smart Magnet)
    ========================================= */
+
+// Move actual DOM caret
+function setCaret(offset) {
+  let textNode = liveInput.firstChild || liveInput;
+  if (!textNode || textNode.nodeType !== 3) return;
+  offset = Math.min(offset, textNode.length);
+  offset = Math.max(0, offset);
+
+  let range = document.createRange();
+  range.setStart(textNode, offset);
+  range.setEnd(textNode, offset);
+  let sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  
+  updateCursor(); 
+}
 
 function updateCursor() {
   let sel = window.getSelection();
   if (sel.rangeCount > 0 && sel.anchorNode && (liveInput.contains(sel.anchorNode) || sel.anchorNode === liveInput)) {
     let range = sel.getRangeAt(0);
-    lastCaretPos = range.startOffset; 
     
+    // Block Text Selection (Calculator Mode)
+    if (!range.collapsed) {
+       range.collapse(false); 
+       sel.removeAllRanges();
+       sel.addRange(range);
+    }
+
     let rects = range.getClientRects();
     let rect, wrapperRect = liveWrapper.getBoundingClientRect();
 
@@ -383,6 +397,7 @@ function updateCursor() {
        range.insertNode(tempSpan);
        rect = tempSpan.getBoundingClientRect();
        tempSpan.remove();
+       range.setEnd(sel.anchorNode, range.startOffset); 
     } else {
        rect = rects[0]; 
     }
@@ -390,13 +405,72 @@ function updateCursor() {
     customCursor.style.left = (rect.left - wrapperRect.left + liveWrapper.scrollLeft) + "px";
     customCursor.style.top = (rect.top - wrapperRect.top + liveWrapper.scrollTop) + "px";
     customCursor.style.height = rect.height + "px";
+    
+    // Auto-scroll
+    if (rect.left < wrapperRect.left) liveWrapper.scrollLeft -= (wrapperRect.left - rect.left) + 15;
+    if (rect.right > wrapperRect.right) liveWrapper.scrollLeft += (rect.right - wrapperRect.right) + 15;
+  }
+}
+
+// Magnet Logic (Atomic Groups)
+let isEnforcingCursor = false;
+
+function enforceCursorConstraints() {
+  if (isEnforcingCursor) return;
+  
+  let sel = window.getSelection();
+  if (!sel.rangeCount || document.activeElement !== liveInput) return;
+  
+  let range = sel.getRangeAt(0);
+  let offset = range.startOffset;
+  let text = liveInput.innerText;
+  
+  let newOffset = offset;
+  
+  // 1. Comma Magnet: ",9" -> Snap left
+  if (offset > 0 && text[offset - 1] === ',') {
+      newOffset = offset - 1;
+  }
+
+  // 2. Operator Magnet: " + " -> Snap to edges
+  else {
+      let ops = ['+', '-', '×', '÷'];
+      let isGhostChar = (c) => c === " " || ops.includes(c);
+      
+      let charBefore = offset > 0 ? text[offset - 1] : null;
+      let charAfter = offset < text.length ? text[offset] : null;
+      
+      if ((charBefore && isGhostChar(charBefore)) || (charAfter && isGhostChar(charAfter))) {
+          // Find Block Boundaries
+          let start = offset;
+          while (start > 0 && isGhostChar(text[start - 1])) start--;
+          
+          let end = offset;
+          while (end < text.length && isGhostChar(text[end])) end++;
+          
+          // Find Inner Right (After Op, Before Space)
+          let innerRight = end;
+          while (innerRight > start && text[innerRight - 1] === " ") innerRight--;
+          if (innerRight === start && text[start] === " ") innerRight = start;
+
+          // Snap to closest
+          let distStart = Math.abs(offset - start);
+          let distInner = Math.abs(offset - innerRight);
+          
+          newOffset = (distStart < distInner) ? start : innerRight;
+      }
+  }
+
+  if (newOffset !== offset) {
+      isEnforcingCursor = true;
+      setCaret(newOffset);
+      setTimeout(() => { isEnforcingCursor = false; }, 0);
   }
 }
 
 function handleInput() {
   let originalText = liveInput.innerText;
   
-  // Save cursor position relative to meaningful chars
   let sel = window.getSelection();
   let range = sel.getRangeAt(0);
   let preCaretRange = range.cloneRange();
@@ -404,69 +478,67 @@ function handleInput() {
   preCaretRange.setEnd(range.endContainer, range.endOffset);
   let meaningfulIndex = preCaretRange.toString().replace(/[, ]/g, "").length;
 
-  // Format Text
   let rawText = originalText.replace(/[, ]/g, ""); 
   let formattedText = formatEquation(rawText);
   
   if (originalText !== formattedText) {
     liveInput.innerText = formattedText;
     
-    // Restore Cursor
     let charCount = 0, newOffset = 0;
-    for (let i = 0; i < formattedText.length; i++) {
-      let char = formattedText[i];
-      if (char !== "," && char !== " ") charCount++;
-      if (charCount === meaningfulIndex && char !== "," && char !== " ") {
-        newOffset = i + 1;
-        break;
+    if (meaningfulIndex === 0) newOffset = 0;
+    else {
+      for (let i = 0; i < formattedText.length; i++) {
+        let char = formattedText[i];
+        if (char !== "," && char !== " ") charCount++;
+        if (charCount === meaningfulIndex) {
+          newOffset = i + 1;
+          break;
+        }
       }
-      if (meaningfulIndex === 0) { newOffset = 0; break; }
     }
-    
-    let newRange = document.createRange();
-    let textNode = liveInput.firstChild || liveInput;
-    if (textNode.nodeType === 3) {
-        newOffset = Math.min(newOffset, textNode.length);
-        newRange.setStart(textNode, newOffset);
-        newRange.setEnd(textNode, newOffset);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        lastCaretPos = newOffset;
-    }
+    setCaret(newOffset);
   }
-
+  
   parseAndRecalculate(false);
-  requestAnimationFrame(() => {
-    liveWrapper.scrollTop = liveWrapper.scrollHeight;
-    updateCursor();
-  });
+  requestAnimationFrame(enforceCursorConstraints);
 }
 
-// Event Listeners for UI
+// UI Listeners
+liveWrapper.addEventListener("click", () => { 
+  if (document.activeElement !== liveInput) liveInput.focus();
+  setTimeout(enforceCursorConstraints, 10);
+});
+
+liveInput.addEventListener("contextmenu", (e) => { e.preventDefault(); return false; });
+
+document.addEventListener('selectionchange', () => { 
+  if (document.activeElement === liveInput) {
+    updateCursor(); 
+    enforceCursorConstraints(); 
+  }
+});
+
 liveInput.addEventListener("input", handleInput);
 liveInput.addEventListener("paste", (e) => e.preventDefault()); 
-liveWrapper.addEventListener("click", () => { if (document.activeElement !== liveInput) liveInput.focus(); });
 liveInput.addEventListener("focus", () => { liveWrapper.classList.add("focused"); updateCursor(); });
 liveInput.addEventListener("blur", () => { liveWrapper.classList.remove("focused"); });
-liveInput.addEventListener("contextmenu", (e) => { e.preventDefault(); return false; });
-document.addEventListener('selectionchange', () => { if (document.activeElement === liveInput) updateCursor(); });
-document.addEventListener("visibilitychange", () => { if (document.hidden) liveInput.blur(); });
 
-// Keyboard Support
+setTimeout(() => { ensureFocus(); updateCursor(); }, 100);
+
+// Keyboard Interceptor
 document.addEventListener('keydown', (e) => {
-  if (DOM.archiveModal.style.display === "block") { if (e.key === 'Escape') closeArchive(); return; }
   const key = e.key; const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && key.toLowerCase() === 'p') { e.preventDefault(); tap(() => window.print()); } 
   else if (ctrl && key.toLowerCase() === 'c') { e.preventDefault(); tap(copyToClipboard); } 
   else if (key.toLowerCase() === 'h') { tap(showArchive); } 
-  else if (/[0-9.]/.test(key)) { tap(() => digit(key)); e.preventDefault(); } 
-  else if (key === '+') { tap(() => setOp('+')); e.preventDefault(); } 
-  else if (key === '-') { tap(() => setOp('-')); e.preventDefault(); } 
-  else if (key === '*' || key.toLowerCase() === 'x') { tap(() => setOp('×')); e.preventDefault(); } 
-  else if (key === '/') { tap(() => setOp('÷')); e.preventDefault(); } 
-  else if (key === '%') { tap(applyPercent); e.preventDefault(); } 
-  else if (key === 'Enter' || key === '=') { e.preventDefault(); tap(enter); } 
   else if (key === 'Escape' || key === 'Delete') { tap(clearAll); }
+  else if (key === 'Enter') { e.preventDefault(); tap(enter); }
+  
+  if (document.activeElement === liveInput) {
+      // Allow native Arrows (selectionchange handles the snap)
+      if (key === 'ArrowLeft' || key === 'ArrowRight') return; 
+      e.preventDefault(); 
+  }
 });
 
 /* =========================================
@@ -476,9 +548,17 @@ document.addEventListener('keydown', (e) => {
 function recalculateGrandTotal(){
   let sum = getGrandSum();
   let displaySum = toBillingString(sum);
-  DOM.total.innerText = formatIN(displaySum);
-  DOM.history.setAttribute('data-total', DOM.total.innerText);
+  let finalText = formatIN(displaySum);
+
+  DOM.total.innerText = finalText;
+  DOM.history.setAttribute('data-total', finalText);
   
+  // Linear Scaling: 26px -> 16px (16 chars -> 33 chars)
+  let len = finalText.length;
+  DOM.total.style.fontSize = len <= 16 
+      ? "" 
+      : Math.max(16, 26 - (len - 16) * 0.59) + "px";
+      
   let isNeg = sum < 0;
   DOM.total.classList.toggle("negative", isNeg);
   let label = document.querySelector(".total-label");
@@ -637,8 +717,3 @@ const resizeObserver = new ResizeObserver(() => { DOM.history.scrollTop = DOM.hi
 resizeObserver.observe(liveWrapper);
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
 loadFromLocal();
-
-setTimeout(() => {
-  ensureFocus();
-  updateCursor();
-}, 50);
