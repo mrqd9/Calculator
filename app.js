@@ -153,7 +153,7 @@ const InputController = {
       const rects = range.getClientRects();
       
       if (rects.length > 0) {
-        rect = rects[0];
+        rect = rects[rects.length - 1];
       } else {
         const tempSpan = document.createElement("span");
         tempSpan.textContent = "|";
@@ -172,12 +172,10 @@ const InputController = {
       DOM.customCursor.style.top = `${top}px`;
       DOM.customCursor.style.left = `${left}px`;
 
-      // Auto-Scroll
       const buffer = 30;
-      if (rect.left < wrapperRect.left + buffer) {
-        DOM.liveWrapper.scrollLeft -= (wrapperRect.left - rect.left) + buffer;
-      } else if (rect.right > wrapperRect.right - buffer) {
-        DOM.liveWrapper.scrollLeft += (rect.right - wrapperRect.right) + buffer;
+      // If the cursor is near the bottom edge of the container, scroll down
+      if (rect.bottom > wrapperRect.bottom - buffer) {
+         DOM.liveWrapper.scrollTop = DOM.liveWrapper.scrollHeight;
       }
     },
 
@@ -282,7 +280,6 @@ const InputController = {
         if (isPrevOp && prevChar === char) return false;
         if (textBefore.trim() === "-" && isPrevOp) return false;
         
-        // Prevent stacking operators or %
         const isNextOp = InputController.config.operators.includes(nextChar);
         if (isNextOp) return false;
         if (char === '%' && (prevChar === '%' || nextChar === '%')) return false;
