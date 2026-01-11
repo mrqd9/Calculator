@@ -68,9 +68,9 @@ const Utils = {
   },
 
   formatIN: (str) => {
-    if (str === "" || str === "-" || str.includes('e')) return str;
+    if (str === "" || str === "-" || str === "−" || str.includes('e')) return str;
     let [i, d] = String(str).split(".");
-    let sign = i.startsWith("-") ? "-" : "";
+    let sign = (i.startsWith("-") || i.startsWith("−")) ? "−" : "";
     i = i.replace(/[^0-9]/g, "");
     let last3 = i.slice(-3), rest = i.slice(0, -3);
     if (rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
@@ -93,11 +93,11 @@ const Utils = {
 
 const InputController = {
   config: {
-    operators: ['+', '-', '×', '÷'],
-    ghostChars: [' ', '+', '-', '×', '÷'], 
+    operators: ['+', '−', '×', '÷'],
+    ghostChars: [' ', '+', '−', '×', '÷'], 
     regex: {
-      isPercent: /^[\+\-]?\d+(\.\d+)?%$/, 
-      splitSegments: /[\+\-\×\÷%]/,      
+      isPercent: /^[\+\−]?\d+(\.\d+)?%$/, 
+      splitSegments: /[\+\−\×\÷%]/,      
       cleanNum: /[, ]/g                  
     }
   },
@@ -176,7 +176,7 @@ const InputController = {
        
       if (rect.top < wrapperRect.top + buffer) {
          DOM.liveWrapper.scrollTop -= (wrapperRect.top - rect.top) + buffer;
-      } 
+      }
       else if (rect.bottom > wrapperRect.bottom - buffer) {
          DOM.liveWrapper.scrollTop += (rect.bottom - wrapperRect.bottom) + buffer;
       }
@@ -269,7 +269,7 @@ const InputController = {
       const nextChar = textAfter.trim().charAt(0);
 
       if (offset === 0) {
-        if (type === 'op' && char !== '-') return false;
+        if (type === 'op' && char !== '−') return false;
         if (type === 'dot') {
            this.handle("0", "num");
            this.handle(".", "dot");
@@ -281,7 +281,7 @@ const InputController = {
       if (type === 'op') {
         const isPrevOp = InputController.config.operators.includes(prevChar);
         if (isPrevOp && prevChar === char) return false;
-        if (textBefore.trim() === "-" && isPrevOp) return false;
+        if (textBefore.trim() === "−" && isPrevOp) return false;
         
         const isNextOp = InputController.config.operators.includes(nextChar);
         if (isNextOp) return false;
@@ -307,7 +307,7 @@ const InputController = {
       if (InputController.config.regex.isPercent.test(rawText)) {
         const gSum = Utils.getGrandSum();
         if (gSum !== 0) {
-           const gSumStr = Utils.formatIN(Utils.toBillingString(Math.abs(gSum)));
+           const gSumStr = Utils.formatIN(Utils.toBillingString(gSum));
            const text = DOM.liveInput.innerText;
            DOM.liveInput.innerText = text + gSumStr;
            InputController.Format.process(DOM.liveInput.innerText, DOM.liveInput.innerText.length);
@@ -361,10 +361,10 @@ const InputController = {
     },
 
     formatString(rawText) {
-      const safe = rawText.replace(/e\+/gi, "__EP__").replace(/e\-/gi, "__EM__");
-      const parts = safe.split(/([\+\-\×\÷%])/);
+      const safe = rawText.replace(/e\+/gi, "__EP__").replace(/e[\-\−]/gi, "__EM__");
+      const parts = safe.split(/([\+\−\×\÷%])/);
       return parts.map(part => {
-        const restored = part.replace(/__EP__/g, "e+").replace(/__EM__/g, "e-");
+        const restored = part.replace(/__EP__/g, "e+").replace(/__EM__/g, "e−");
         if (InputController.config.operators.concat(['%']).includes(restored)) return ` ${restored} `;
         if (/^[0-9.,]+$/.test(restored) && !restored.toLowerCase().includes('e')) {
           return Utils.formatIN(restored.replace(/,/g, ""));
@@ -381,12 +381,12 @@ const InputController = {
 
 function parseAndRecalculate(resetCursor = true) {
   let rawText = DOM.liveInput.innerText.replace(/[, ]/g, "");
-  let safeText = rawText.replace(/e\+/gi, "EE_PLUS").replace(/e\-/gi, "EE_MINUS");
-  let parts = safeText.split(/([\+\-\×\÷])/).map(p => p.trim()).filter(p => p);
+  let safeText = rawText.replace(/e\+/gi, "EE_PLUS").replace(/e[\-\−]/gi, "EE_MINUS");
+  let parts = safeText.split(/([\+\−\×\÷])/).map(p => p.trim()).filter(p => p);
 
   let rawTokens = parts.map(part => {
-    let restored = part.replace(/EE_PLUS/g, "e+").replace(/EE_MINUS/g, "e-");
-    if (["+", "-", "×", "÷"].includes(restored)) return restored;
+    let restored = part.replace(/EE_PLUS/g, "e+").replace(/EE_MINUS/g, "e−");
+    if (["+", "−", "×", "÷"].includes(restored)) return restored;
     if (restored.includes("%")) return handlePercentageToken(restored);
     return restored;
   });
@@ -436,15 +436,15 @@ function calculatePercentageValue(t, i, rawTokens) {
     let percentVal = t.rawNum;
     if (isNextScale) {
       calculatedValue = Utils.cleanNum(percentVal / 100);
-    } else if (i === 0 || (i === 1 && rawTokens[0] === "-")) {
+    } else if (i === 0 || (i === 1 && rawTokens[0] === "−")) {
       let gSum = Utils.getGrandSum();
-      if (gSum !== 0) calculatedValue = Utils.cleanNum(Math.abs(gSum) * (percentVal / 100));
+      if (gSum !== 0) calculatedValue = Utils.cleanNum(gSum * (percentVal / 100));
     } else if (i > 1) {
       let op = rawTokens[i - 1];
-      if (op === "+" || op === "-") {
+      if (op === "+" || op === "−") {
         let subExprTokens = STATE.tokens.slice(0, STATE.tokens.length - 1);
         let runningTotal = evaluate(subExprTokens);
-        calculatedValue = Utils.cleanNum(Math.abs(runningTotal) * (percentVal / 100));
+        calculatedValue = Utils.cleanNum(runningTotal * (percentVal / 100));
       }
     }
   }
@@ -453,11 +453,14 @@ function calculatePercentageValue(t, i, rawTokens) {
 
 function evaluate(sourceTokens = STATE.tokens) {
   let tempTokens = [...sourceTokens];
-  while (tempTokens.length > 0 && ["+", "-", "×", "÷"].includes(tempTokens.at(-1))) { tempTokens.pop(); }
+  while (tempTokens.length > 0 && ["+", "−", "×", "÷"].includes(tempTokens.at(-1))) { tempTokens.pop(); }
   if (tempTokens.length === 0) return 0;
 
   let exp = tempTokens.map(t => (typeof t === "object" ? t.value : t))
-    .join(" ").replace(/×/g, "*").replace(/÷/g, "/");
+    .join(" ")
+    .replace(/×/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/−/g, "-"); 
     
   try { return Utils.cleanNum(new Function("return " + exp)()); } catch { return 0; }
 }
@@ -479,7 +482,7 @@ function tap(actionFn) {
 
 // Global API
 window.digit = (d) => tap(() => InputController.Insert.handle(d, d === '.' ? 'dot' : 'num'));
-window.setOp = (op) => tap(() => InputController.Insert.handle(op, 'op'));
+window.setOp = (op) => tap(() => InputController.Insert.handle(op === '-' ? '−' : op, 'op'));
 window.back = () => tap(() => InputController.Insert.backspace());
 window.applyPercent = () => tap(() => InputController.Insert.applyPercent());
 
