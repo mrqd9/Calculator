@@ -172,10 +172,13 @@ const InputController = {
       DOM.customCursor.style.top = `${top}px`;
       DOM.customCursor.style.left = `${left}px`;
 
-      const buffer = 30;
-      // If the cursor is near the bottom edge of the container, scroll down
-      if (rect.bottom > wrapperRect.bottom - buffer) {
-         DOM.liveWrapper.scrollTop = DOM.liveWrapper.scrollHeight;
+      const buffer = 20;
+       
+      if (rect.top < wrapperRect.top + buffer) {
+         DOM.liveWrapper.scrollTop -= (wrapperRect.top - rect.top) + buffer;
+      } 
+      else if (rect.bottom > wrapperRect.bottom - buffer) {
+         DOM.liveWrapper.scrollTop += (rect.bottom - wrapperRect.bottom) + buffer;
       }
     },
 
