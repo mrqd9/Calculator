@@ -475,7 +475,7 @@ function tap(actionFn) {
   if (STATE.currentPressedBtn) {
     const btn = STATE.currentPressedBtn;
     btn.classList.add("pressed");
-    setTimeout(() => btn.classList.remove("pressed"), 100);
+    setTimeout(() => btn.classList.remove("pressed"), 40);
     STATE.currentPressedBtn = null;
   }
 }
@@ -491,15 +491,15 @@ window.copyToClipboard = () => {
   const rows = DOM.history.querySelectorAll('.h-row');
   if (rows.length === 0) return false;
 
-  let text = "SUMMARY\n\n";
+  let text = "SUMMARY\n";
   rows.forEach(row => {
     const exp = row.querySelector('.h-exp').innerText.trim();
     const res = row.querySelector('.h-res').innerText.trim();
-    text += `${exp} ${res}\n`;
+    text += `${exp}  ${res}\n`;
   });
 
   text += "_______________________\n";
-  text += `GRAND TOTAL: ${DOM.total.innerText}`;
+  text += `GRAND TOTAL:  ${DOM.total.innerText}`;
 
   if (navigator.clipboard) {
      navigator.clipboard.writeText(text);
