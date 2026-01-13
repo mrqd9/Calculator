@@ -31,7 +31,6 @@ const STATE = {
   isEnforcingCursor: false
 };
 
-// Initialize Custom Interface (No-Edit Mode)
 (function setupInterface() {
   const wrapper = document.createElement("div");
   wrapper.id = "live-wrapper";
@@ -64,7 +63,7 @@ const Utils = {
 
   toBillingString: (val) => {
     let n = Number(val);
-    return Math.abs(n) >= 1e20 ? n.toExponential(8) : n.toFixed(2);
+    return Math.abs(n) >= 1e16 ? n.toExponential(8) : n.toFixed(2);
   },
 
   formatIN: (str) => {
@@ -87,6 +86,16 @@ const Utils = {
   }
 };
 
+function safeLoad(key, fallback) {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (e) {
+    console.error("Corrupt storage for " + key, e);
+    return fallback;
+  }
+}
+
 /* =========================================
    3. INPUT CONTROLLER (Manual Logic)
    ========================================= */
@@ -94,7 +103,7 @@ const Utils = {
 const InputController = {
   config: {
     operators: ['+', '−', '×', '÷'],
-    ghostChars: [' ', '+', '−', '×', '÷'], 
+    ghostChars: [' ', '+', '−', '×', '÷', '='], 
     regex: {
       isPercent: /^[\+\−]?\d+(\.\d+)?%$/, 
       splitSegments: /[\+\−\×\÷%]/,      
@@ -199,26 +208,39 @@ const InputController = {
       const text = DOM.liveInput.innerText;
       let newOffset = offset;
 
-      if (offset > 0 && text[offset - 1] === ',') {
-        newOffset = offset - 1;
-      } else {
-        const isGhost = (char) => InputController.config.ghostChars.includes(char);
-        const charBefore = offset > 0 ? text[offset - 1] : null;
-        const charAfter = offset < text.length ? text[offset] : null;
+      const resultRegex = /=\s*[−-]?\s*[\d.,]+/g;
+      let match;
+      while ((match = resultRegex.exec(text)) !== null) {
+          const start = match.index;
+          const end = match.index + match[0].length;
+          
+          if (newOffset > start && newOffset < end) {
+              newOffset = end; 
+          }
+      }
 
-        if ((charBefore && isGhost(charBefore)) || (charAfter && isGhost(charAfter))) {
-          let start = offset, end = offset;
-          while (start > 0 && isGhost(text[start - 1])) start--;
-          while (end < text.length && isGhost(text[end])) end++;
+      if (newOffset === offset) {
+          if (offset > 0 && text[offset - 1] === ',') {
+            newOffset = offset - 1;
+          } else {
+            const isGhost = (char) => InputController.config.ghostChars.includes(char);
+            const charBefore = offset > 0 ? text[offset - 1] : null;
+            const charAfter = offset < text.length ? text[offset] : null;
 
-          let innerRight = end;
-          while (innerRight > start && text[innerRight - 1] === " ") innerRight--;
-          if (innerRight === start && text[start] === " ") innerRight = start;
+            if ((charBefore && isGhost(charBefore)) || (charAfter && isGhost(charAfter))) {
+              let start = offset, end = offset;
+              while (start > 0 && isGhost(text[start - 1])) start--;
+              while (end < text.length && isGhost(text[end])) end++;
 
-          const distStart = Math.abs(offset - start);
-          const distInner = Math.abs(offset - innerRight);
-          newOffset = (distStart < distInner) ? start : innerRight;
-        }
+              let innerRight = end;
+              while (innerRight > start && text[innerRight - 1] === " ") innerRight--;
+              if (innerRight === start && text[start] === " ") innerRight = start;
+
+              const distStart = Math.abs(offset - start);
+              const distInner = Math.abs(offset - innerRight);
+              newOffset = (distStart < distInner) ? start : innerRight;
+            }
+          }
       }
 
       if (newOffset !== offset) {
@@ -226,6 +248,72 @@ const InputController = {
         this.setCaret(newOffset);
         setTimeout(() => { STATE.isEnforcingCursor = false; }, 0);
       }
+    }
+  },
+
+  /* --- Math Logic Helper --- */
+  Math: {
+    tokenize(rawFull) {
+        let rawText = rawFull.replace(/[, ]/g, "");
+        if (rawText.includes("=")) {
+            rawText = rawText.split("=").pop();
+        }
+        
+        let safeText = rawText.replace(/e\+/gi, "EE_PLUS").replace(/e[\-\−]/gi, "EE_MINUS");
+        // Split by operators AND percent
+        let parts = safeText.split(/([\+\−\×\÷%])/).map(p => p.trim()).filter(p => p);
+
+        let initialTokens = [];
+        let currentNum = null;
+
+        for (let i = 0; i < parts.length; i++) {
+            let part = parts[i];
+            let restored = part.replace(/EE_PLUS/g, "e+").replace(/EE_MINUS/g, "e−");
+
+            if (["+", "−", "×", "÷"].includes(restored)) {
+                if (currentNum !== null) { initialTokens.push(currentNum); currentNum = null; }
+                initialTokens.push(restored);
+            } 
+            else if (restored === "%") {
+                if (currentNum !== null) {
+                    if (typeof currentNum === 'object' && currentNum.isPercent) {
+                        currentNum.text += "%";
+                        currentNum.count++;
+                    } else {
+                        let val = parseFloat(currentNum);
+                        currentNum = { text: currentNum + "%", value: 0, isPercent: true, rawNum: val, count: 1 };
+                    }
+                }
+            }
+            else {
+                if (currentNum !== null) { initialTokens.push(currentNum); } 
+                currentNum = restored;
+            }
+        }
+        if (currentNum !== null) initialTokens.push(currentNum);
+
+        let resolvedTokens = [];
+        for (let i = 0; i < initialTokens.length; i++) {
+            let t = initialTokens[i];
+            
+            if (i > 0) {
+                let prev = resolvedTokens[resolvedTokens.length - 1];
+                let isPrevValue = (typeof prev === 'string' && !["+", "−", "×", "÷"].includes(prev)) || (typeof prev === 'object');
+                let isCurrValue = (typeof t === 'string' && !["+", "−", "×", "÷"].includes(t)) || (typeof t === 'object');
+                
+                if (isPrevValue && isCurrValue) {
+                    resolvedTokens.push("×");
+                }
+            }
+
+            if (typeof t === "object" && t.isPercent) {
+                t.value = calculatePercentageValue(t, resolvedTokens.length, resolvedTokens);
+                resolvedTokens.push(t);
+            } else {
+                resolvedTokens.push(t);
+            }
+        }
+        return resolvedTokens;
     }
   },
 
@@ -243,15 +331,43 @@ const InputController = {
           offset = text.length;
       }
 
+      // Handle % cleanup (eat trailing operators)
+      if (type === 'op' && char === '%' && offset > 0) {
+          const trimOps = /[\+\−\×\÷\s]+$/;
+          const match = text.slice(0, offset).match(trimOps);
+          if (match) {
+               const len = match[0].length;
+               text = text.slice(0, offset - len) + text.slice(offset);
+               offset -= len;
+          }
+      }
+
       if (!this.validate(text, char, type, offset)) return false;
 
-      // Operator Replacement
-      if (type === 'op' && offset > 0) {
-          const prevChar = text[offset - 1];
-          const isPrevOp = InputController.config.operators.includes(prevChar);
-          if (isPrevOp && char !== "%") {
-              text = text.slice(0, offset - 1) + text.slice(offset);
-              offset--; 
+      // Smart Operator Replacement
+      if (type === 'op') {
+          const textBefore = text.slice(0, offset);
+          const opBlockRegex = /([\+\−\×\÷])\s*([\+\−\×\÷])?\s*$/;
+          const match = textBefore.match(opBlockRegex);
+
+          if (match) {
+              const fullMatchStr = match[0];
+              const firstOp = match[1];
+              const secondOp = match[2];
+
+              let replaceBlock = true;
+
+              if (!secondOp) {
+                  // If inserting Minus and previous is NOT Minus, allow append
+                  if ((char === '−' || char === '-') && firstOp !== '−' && firstOp !== '-') {
+                      replaceBlock = false; 
+                  }
+              }
+
+              if (replaceBlock) {
+                  text = text.slice(0, offset - fullMatchStr.length) + text.slice(offset);
+                  offset -= fullMatchStr.length;
+              }
           }
       }
 
@@ -264,55 +380,49 @@ const InputController = {
     validate(fullText, char, type, offset) {
       const textBefore = fullText.substring(0, offset);
       const prevChar = textBefore.trim().slice(-1);
-      
       const textAfter = fullText.substring(offset);
       const nextChar = textAfter.trim().charAt(0);
 
+      const endsWithResultRegex = /=\s*[−-]?\s*[\d.,]+$/;
+      if (endsWithResultRegex.test(textBefore)) {
+          const lastSegment = textBefore.split("=").pop();
+          const isPureResult = /^\s*[−-]?\s*[\d.,]+$/.test(lastSegment);
+          if (isPureResult && (type === 'num' || type === 'dot')) return false;
+      }
+
       if (offset === 0) {
         if (type === 'op' && char !== '−') return false;
-        if (type === 'dot') {
-           this.handle("0", "num");
-           this.handle(".", "dot");
-           return false; 
-        }
+        if (type === 'dot') { this.handle("0", "num"); this.handle(".", "dot"); return false; }
         return true;
       }
 
       if (type === 'op') {
+        if (char === '%') { if (!/[\d.]/.test(prevChar)) return false; }
+
         const isPrevOp = InputController.config.operators.includes(prevChar);
-        if (isPrevOp && prevChar === char) return false;
-        if (textBefore.trim() === "−" && isPrevOp) return false;
-        
-        const isNextOp = InputController.config.operators.includes(nextChar);
-        if (isNextOp) return false;
         if (char === '%' && (prevChar === '%' || nextChar === '%')) return false;
       }
 
       if (type === 'dot') {
         const lastSegment = textBefore.split(InputController.config.regex.splitSegments).pop();
         if (lastSegment.includes('.')) return false;
-        if (lastSegment.trim() === "") {
-           this.handle("0", "num");
-           this.handle(".", "dot");
-           return false;
-        }
+        if (lastSegment.trim() === "") { this.handle("0", "num"); this.handle(".", "dot"); return false; }
       }
       return true;
     },
 
     applyPercent() {
       if (!this.handle("%", 'op')) return false;
-      const rawText = DOM.liveInput.innerText.replace(InputController.config.regex.cleanNum, "");
       
+      const rawText = DOM.liveInput.innerText.replace(InputController.config.regex.cleanNum, "");
       if (InputController.config.regex.isPercent.test(rawText)) {
         const gSum = Utils.getGrandSum();
         if (gSum !== 0) {
            const gSumStr = Utils.formatIN(Utils.toBillingString(gSum));
-           const text = DOM.liveInput.innerText;
-           DOM.liveInput.innerText = text + gSumStr;
-           InputController.Format.process(DOM.liveInput.innerText, DOM.liveInput.innerText.length);
+           DOM.liveInput.innerText = DOM.liveInput.innerText + gSumStr;
         }
       }
+      InputController.Format.process(DOM.liveInput.innerText, DOM.liveInput.innerText.length);
       return true;
     },
 
@@ -327,6 +437,21 @@ const InputController = {
 
       if (offset === 0) return false;
 
+      // Atomic Delete for Result Block
+      const textBefore = text.substring(0, offset);
+      const atomicMatch = textBefore.match(/=\s*[−-]?\s*[\d.,]+$/);
+      if (atomicMatch) {
+          const suffix = atomicMatch[0].split("=").pop();
+          const isPureResult = /^\s*[−-]?\s*[\d.,]+$/.test(suffix);
+          if (isPureResult) {
+             const lengthToRemove = atomicMatch[0].length;
+             const newText = text.slice(0, offset - lengthToRemove) + text.slice(offset);
+             DOM.liveInput.innerText = newText;
+             InputController.Format.process(newText, offset - lengthToRemove);
+             return true;
+          }
+      }
+
       const newText = text.slice(0, offset - 1) + text.slice(offset);
       DOM.liveInput.innerText = newText;
       InputController.Format.process(newText, offset - 1);
@@ -334,11 +459,13 @@ const InputController = {
     }
   },
 
-  /* --- Formatting Engine --- */
+  /* --- Formatting & Logic Engine --- */
   Format: {
     process(text, desiredCursorPos) {
-      const rawText = text.replace(InputController.config.regex.cleanNum, ""); 
-      const formattedText = this.formatString(rawText);
+      let cleanText = text.replace(InputController.config.regex.cleanNum, "");
+      cleanText = this.updateChains(cleanText);
+      
+      const formattedText = this.formatString(cleanText);
       
       const originalSub = text.substring(0, desiredCursorPos);
       const meaningfulIndex = originalSub.replace(InputController.config.regex.cleanNum, "").length;
@@ -360,12 +487,44 @@ const InputController = {
       requestAnimationFrame(() => InputController.Cursor.enforceConstraints());
     },
 
+    updateChains(rawText) {
+       if (!rawText.includes("=")) return rawText;
+       const segments = rawText.split("=");
+       let newString = "";
+       let cumulativeExpression = segments[0]; 
+       
+       newString += segments[0];
+
+       for (let i = 1; i < segments.length; i++) {
+           let result = evaluate(cumulativeExpression); 
+           
+           let resultStr = Utils.toBillingString(result);
+           if (resultStr.endsWith(".00")) resultStr = resultStr.slice(0, -3);
+           
+           newString += "=" + resultStr;
+           
+           let currentSeg = segments[i];
+           const matchNumberAtStart = currentSeg.match(/^\s*[−-]?\s*[\d.]+/);
+           
+           if (matchNumberAtStart) {
+               let strippedSeg = currentSeg.substring(matchNumberAtStart[0].length);
+               newString += strippedSeg;
+               cumulativeExpression = resultStr + strippedSeg; 
+           } else {
+               newString += currentSeg;
+               cumulativeExpression = resultStr + currentSeg;
+           }
+       }
+       newString = newString.replace(/[\+\-\*\/]{2,}/g, (m) => m.slice(-1));
+       return newString;
+    },
+
     formatString(rawText) {
       const safe = rawText.replace(/e\+/gi, "__EP__").replace(/e[\-\−]/gi, "__EM__");
-      const parts = safe.split(/([\+\−\×\÷%])/);
+      const parts = safe.split(/([\+\−\×\÷%=])/);
       return parts.map(part => {
         const restored = part.replace(/__EP__/g, "e+").replace(/__EM__/g, "e−");
-        if (InputController.config.operators.concat(['%']).includes(restored)) return ` ${restored} `;
+        if (InputController.config.operators.concat(['%', '=']).includes(restored)) return ` ${restored} `;
         if (/^[0-9.,]+$/.test(restored) && !restored.toLowerCase().includes('e')) {
           return Utils.formatIN(restored.replace(/,/g, ""));
         }
@@ -380,79 +539,60 @@ const InputController = {
    ========================================= */
 
 function parseAndRecalculate(resetCursor = true) {
-  let rawText = DOM.liveInput.innerText.replace(/[, ]/g, "");
-  let safeText = rawText.replace(/e\+/gi, "EE_PLUS").replace(/e[\-\−]/gi, "EE_MINUS");
-  let parts = safeText.split(/([\+\−\×\÷])/).map(p => p.trim()).filter(p => p);
-
-  let rawTokens = parts.map(part => {
-    let restored = part.replace(/EE_PLUS/g, "e+").replace(/EE_MINUS/g, "e−");
-    if (["+", "−", "×", "÷"].includes(restored)) return restored;
-    if (restored.includes("%")) return handlePercentageToken(restored);
-    return restored;
-  });
-
-  STATE.tokens = [];
-  for (let i = 0; i < rawTokens.length; i++) {
-    let t = rawTokens[i];
-    if (typeof t === "object" && t.isPercent) {
-      t.value = calculatePercentageValue(t, i, rawTokens);
-      STATE.tokens.push(t);
-    } else {
-      STATE.tokens.push(t);
-    }
-  }
+  STATE.tokens = InputController.Math.tokenize(DOM.liveInput.innerText);
 
   let currentEval = evaluate();
-  DOM.liveTotal.innerText = STATE.tokens.length > 0 ? `= ${Utils.formatIN(Utils.toBillingString(currentEval))}` : "";
+  
+  let rawFull = DOM.liveInput.innerText.replace(/[, ]/g, "");
+  const endsWithResultBlock = /=\s*[−-]?\s*[\d.,]+$/.test(rawFull.trim());
+  const showTotal = STATE.tokens.length > 0 && !rawFull.trim().endsWith("=") && !endsWithResultBlock;
+  
+  DOM.liveTotal.innerText = showTotal ? `= ${Utils.formatIN(Utils.toBillingString(currentEval))}` : "";
 }
 
 function handlePercentageToken(restored) {
-  let percentIndex = restored.lastIndexOf("%");
-  let suffix = restored.substring(percentIndex + 1);
-
-  if (suffix.length > 0 && !isNaN(parseFloat(suffix))) {
-    let prefix = restored.substring(0, percentIndex);
-    let pCount = (prefix.match(/%/g) || []).length + 1;
-    let numVal = parseFloat(prefix.replace(/%/g, ""));
-    let val = numVal;
-    for (let k = 0; k < pCount; k++) val = val / 100;
-    return { text: restored, value: Utils.cleanNum(val * parseFloat(suffix)), isPercent: true };
-  }
-
-  let percentCount = (restored.match(/%/g) || []).length;
-  let num = parseFloat(restored.replace(/%/g, ""));
-  let val = num;
-  for (let k = 0; k < percentCount; k++) val = val / 100;
-  return { text: restored, value: Utils.cleanNum(val), isPercent: true, rawNum: num, count: percentCount };
+  return { text: restored, value: 0, isPercent: true }; 
 }
 
 function calculatePercentageValue(t, i, rawTokens) {
-  let calculatedValue = t.value;
-  let nextToken = rawTokens[i + 1];
-  let isNextScale = ["×", "÷", "*", "/"].includes(nextToken);
+  let calculatedValue = 0;
+  
+  let val = t.rawNum;
+  for (let k = 0; k < t.count; k++) val = val / 100;
+  calculatedValue = Utils.cleanNum(val);
 
-  if (t.count === 1 && !t.text.includes('%')) { /*noop*/ }
-  else if (t.count === 1) {
-    let percentVal = t.rawNum;
-    if (isNextScale) {
-      calculatedValue = Utils.cleanNum(percentVal / 100);
-    } else if (i === 0 || (i === 1 && rawTokens[0] === "−")) {
-      let gSum = Utils.getGrandSum();
-      if (gSum !== 0) calculatedValue = Utils.cleanNum(gSum * (percentVal / 100));
-    } else if (i > 1) {
-      let op = rawTokens[i - 1];
-      if (op === "+" || op === "−") {
-        let subExprTokens = STATE.tokens.slice(0, STATE.tokens.length - 1);
-        let runningTotal = evaluate(subExprTokens);
-        calculatedValue = Utils.cleanNum(runningTotal * (percentVal / 100));
+  if (i > 0) {
+      let prev = rawTokens[i - 1];
+      if (prev === "+" || prev === "−" || prev === "-") {
+          let isUnary = false;
+          if (i - 1 === 0) isUnary = true;
+          else if (i - 2 >= 0) {
+              const prevPrev = rawTokens[i - 2];
+              if (typeof prevPrev === 'string' && ["+", "−", "-", "×", "*", "÷", "/"].includes(prevPrev)) {
+                  isUnary = true;
+              }
+          }
+
+          if (!isUnary) {
+              let subExprTokens = rawTokens.slice(0, i - 1);
+              let runningTotal = evaluate(subExprTokens); 
+              calculatedValue = Utils.cleanNum(runningTotal * (t.rawNum / 100)); 
+          }
       }
-    }
   }
   return calculatedValue;
 }
 
 function evaluate(sourceTokens = STATE.tokens) {
-  let tempTokens = [...sourceTokens];
+  let tempTokens;
+  if (Array.isArray(sourceTokens)) {
+      tempTokens = [...sourceTokens];
+  } else if (typeof sourceTokens === 'string') {
+      tempTokens = InputController.Math.tokenize(sourceTokens);
+  } else {
+      return 0;
+  }
+
   while (tempTokens.length > 0 && ["+", "−", "×", "÷"].includes(tempTokens.at(-1))) { tempTokens.pop(); }
   if (tempTokens.length === 0) return 0;
 
@@ -480,27 +620,22 @@ function tap(actionFn) {
   }
 }
 
-// Global API
 window.digit = (d) => tap(() => InputController.Insert.handle(d, d === '.' ? 'dot' : 'num'));
 window.setOp = (op) => tap(() => InputController.Insert.handle(op === '-' ? '−' : op, 'op'));
 window.back = () => tap(() => InputController.Insert.backspace());
 window.applyPercent = () => tap(() => InputController.Insert.applyPercent());
 
-/* Copy Summary */
 window.copyToClipboard = () => {
   const rows = DOM.history.querySelectorAll('.h-row');
   if (rows.length === 0) return false;
-
   let text = "SUMMARY\n";
   rows.forEach(row => {
     const exp = row.querySelector('.h-exp').innerText.trim();
     const res = row.querySelector('.h-res').innerText.trim();
     text += `${exp}  ${res}\n`;
   });
-
   text += "_______________________\n";
   text += `GRAND TOTAL:  ${DOM.total.innerText}`;
-
   if (navigator.clipboard) {
      navigator.clipboard.writeText(text);
   } else {
@@ -511,7 +646,6 @@ window.copyToClipboard = () => {
      document.execCommand("copy");
      document.body.removeChild(textarea);
   }
-  
   if(DOM.copyBtn) {
       DOM.copyBtn.classList.add("pressed"); 
       setTimeout(() => DOM.copyBtn.classList.remove("pressed"), 200);
@@ -519,27 +653,55 @@ window.copyToClipboard = () => {
   return true;
 };
 
+window.resolveInline = () => {
+  parseAndRecalculate(false); 
+  if (STATE.tokens.length === 0) return false;
+  let result = evaluate();
+  
+  let rawText = DOM.liveInput.innerText;
+  const resultBlocks = rawText.match(/=\s*([−-]?\s*[\d.,]+)/g);
+  if (resultBlocks && resultBlocks.length > 0) {
+      let lastBlock = resultBlocks[resultBlocks.length - 1]; 
+      let lastValStr = lastBlock.replace(/=/g, "").trim().replace(/,/g, "");
+      let lastVal = parseFloat(lastValStr);
+      if (!isNaN(lastVal) && Math.abs(lastVal - result) < 0.0000001) {
+          return false;
+      }
+  }
+
+  let resStr = Utils.toBillingString(result);
+  if (resStr.endsWith(".00")) resStr = resStr.slice(0, -3);
+  InputController.Insert.handle("=", "op"); 
+  return true;
+};
+
 window.enter = () => {
   parseAndRecalculate(false);
+  let checkText = DOM.liveInput.innerText.trim();
+  if (checkText === "−" || checkText === "-") return false;
   if (!STATE.tokens.length) return false;
-
   let result = evaluate();
   let row = document.createElement("div");
   row.className = "h-row";
   row.dataset.value = result;
-
   let expText = DOM.liveInput.innerText;
+  if (expText.includes("=")) {
+      const lastEqIndex = expText.lastIndexOf("=");
+      const textAfterEq = expText.substring(lastEqIndex + 1).trim();
+      const valAfterEq = parseFloat(textAfterEq.replace(/,/g, ""));
+      if (!isNaN(valAfterEq) && Math.abs(valAfterEq - result) < 0.0000001) {
+          expText = expText.substring(0, lastEqIndex).trim();
+      }
+  }
+  expText = expText.replace(/[\s\+\−\×\÷\.\-]+$/, ""); 
   let resText = Utils.toBillingString(result);
   resText = Utils.formatIN(resText).length > 18 ? Number(result).toExponential(8) : Utils.formatIN(resText);
-
   row.innerHTML = `<span class="h-exp">${expText} =</span><span class="h-res ${result < 0 ? 'negative' : ''}">${resText}</span><div class="swipe-arrow"></div>`;
   enableSwipe(row);
   DOM.history.appendChild(row);
-
   DOM.liveInput.innerText = "";
   DOM.liveTotal.innerText = "";
   STATE.tokens = [];
-
   recalculateGrandTotal();
   setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
   DOM.liveInput.focus();
@@ -547,10 +709,9 @@ window.enter = () => {
   return true;
 };
 
-// Button Initialization
 document.querySelectorAll('.btn-key').forEach(btn => {
+  if (btn.classList.contains('eq')) return; 
   btn.removeAttribute('onpointerdown'); btn.removeAttribute('onpointerup'); btn.removeAttribute('onpointerleave');
-
   if (btn.classList.contains('cut')) {
     btn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); STATE.currentPressedBtn = btn; STATE.isLongPress = false;
@@ -583,13 +744,11 @@ function recalculateGrandTotal() {
   let finalText = Utils.formatIN(displaySum);
   DOM.total.innerText = finalText;
   DOM.history.setAttribute('data-total', finalText);
-  
   let len = finalText.length;
   DOM.total.style.fontSize = len <= 16 ? "" : Math.max(16, 26 - (len - 16) * 0.59) + "px";
   DOM.total.classList.toggle("negative", sum < 0);
   let label = document.querySelector(".total-label");
   if(label) label.classList.toggle("is-negative", sum < 0);
-  
   localStorage.setItem("billing_calc_history", DOM.history.innerHTML);
   localStorage.setItem("active_session_id", STATE.activeSessionId || "");
 }
@@ -598,9 +757,8 @@ function clearAll() {
   let hasContent = STATE.tokens.length > 0 || DOM.history.innerHTML.trim() !== "";
   if (!hasContent) return false;
   Utils.vibrate(85);
-
   if (DOM.history.innerHTML.trim()) {
-    let archive = JSON.parse(localStorage.getItem("calc_archive") || "[]");
+    let archive = safeLoad("calc_archive", []);
     const ts = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
     let rowsData = [];
     document.querySelectorAll(".h-row").forEach(row => {
@@ -612,14 +770,13 @@ function clearAll() {
     if(archive.length > 20) archive.pop();
     localStorage.setItem("calc_archive", JSON.stringify(archive));
   }
-  
   STATE.tokens = []; DOM.liveInput.innerText = ""; DOM.liveTotal.innerText = ""; DOM.history.innerHTML = ""; STATE.activeSessionId = null; 
   recalculateGrandTotal(); DOM.liveInput.focus(); InputController.Cursor.renderVisual();
   return false;
 }
 
 window.showArchive = () => {
-  const archive = JSON.parse(localStorage.getItem("calc_archive") || "[]");
+  const archive = safeLoad("calc_archive", []);
   DOM.archiveList.innerHTML = archive.length === 0 ? "<div style='text-align:center; padding:40px; color:#999;'>No history records found</div>" : "";
   archive.forEach((item, idx) => {
     let rowsHtml = item.data.map(row => `<div class="archive-data-row"><span style="color:#666; flex:1; text-align:left;">${row.exp}</span><span class="${row.val < 0 ? 'negative' : ''}" style="font-weight:600;">${row.res}</span></div>`).join("");
@@ -638,7 +795,7 @@ window.showArchive = () => {
 };
 
 window.restoreSession = (index) => {
-  const archive = JSON.parse(localStorage.getItem("calc_archive") || "[]");
+  const archive = safeLoad("calc_archive", []);
   const session = archive[index];
   if (!session) return;
   STATE.tokens = []; DOM.liveInput.innerText = ""; DOM.liveTotal.innerText = ""; DOM.history.innerHTML = ""; STATE.activeSessionId = session.id;
@@ -652,8 +809,7 @@ window.restoreSession = (index) => {
 
 function enableSwipe(row){
   let sx = 0, dx = 0, dragging = false;
-  row.onclick = (e) => { 
-    e.stopPropagation(); 
+  row.onclick = (e) => { e.stopPropagation(); 
     if (row.classList.contains("swiping")) return; 
     if (row.classList.contains("expanded")) { row.classList.remove("expanded"); } else {
       document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); 
@@ -674,7 +830,7 @@ function enableSwipe(row){
     const threshold = row.offsetWidth * 0.4; 
     if (dx < -threshold) { row.style.transform = "translateX(-110%)"; Utils.vibrate(30); setTimeout(()=>{ row.remove(); recalculateGrandTotal(); }, 250); } 
     else if (dx > threshold) { row.style.transform = "translateX(110%)"; if (STATE.tokens.length) window.enter(); 
-      let cleanText = row.querySelector(".h-exp").innerText.replace(/=/g, "").replace(/,/g, "").trim();
+      let cleanText = row.querySelector(".h-exp").innerText.replace(/=\s*$/, "").replace(/,/g, "").trim();
       DOM.liveInput.innerText = cleanText; 
       InputController.Format.process(cleanText, cleanText.length);
       DOM.liveInput.focus(); tap(()=>{});
@@ -684,14 +840,9 @@ function enableSwipe(row){
   });
 }
 
-// ===========================================
-// EVENTS
-// ===========================================
-
 const handleWrapperInteraction = (e) => {
   if (DOM.liveWrapper.contains(e.target)) {
     InputController.Cursor.ensureFocus();
-    
     if (e.type === 'touchstart' || e.type === 'mousedown') {
        let cx = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
        let cy = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
@@ -702,19 +853,10 @@ const handleWrapperInteraction = (e) => {
 
 DOM.liveWrapper.addEventListener("mousedown", handleWrapperInteraction);
 DOM.liveWrapper.addEventListener("touchstart", handleWrapperInteraction, { passive: true });
-
 DOM.liveInput.addEventListener("contextmenu", (e) => { e.preventDefault(); return false; });
-
 DOM.liveInput.addEventListener("focus", () => { DOM.liveWrapper.classList.add("focused"); InputController.Cursor.renderVisual(); });
 DOM.liveInput.addEventListener("blur", () => { DOM.liveWrapper.classList.remove("focused"); InputController.Cursor.renderVisual(); });
-
-document.addEventListener('selectionchange', () => { 
-  if (document.activeElement === DOM.liveInput) { 
-    InputController.Cursor.renderVisual(); 
-    InputController.Cursor.enforceConstraints(); 
-  }
-});
-
+document.addEventListener('selectionchange', () => { if (document.activeElement === DOM.liveInput) { InputController.Cursor.renderVisual(); InputController.Cursor.enforceConstraints(); } });
 document.addEventListener('keydown', (e) => {
   const key = e.key; const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && key.toLowerCase() === 'p') { e.preventDefault(); tap(() => window.print()); } 
@@ -722,17 +864,28 @@ document.addEventListener('keydown', (e) => {
   else if (key.toLowerCase() === 'h') { tap(window.showArchive); } 
   else if (key === 'Escape' || key === 'Delete') { tap(clearAll); }
   else if (key === 'Enter') { e.preventDefault(); tap(window.enter); }
+  else if (key === '=') { e.preventDefault(); tap(window.resolveInline); }
   if (document.activeElement === DOM.liveInput) { if (key !== 'ArrowLeft' && key !== 'ArrowRight') e.preventDefault(); }
 });
-
 if (DOM.copyBtn) DOM.copyBtn.addEventListener("click", () => tap(window.copyToClipboard));
-
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
 window.closeArchive = () => { DOM.archiveModal.style.display = "none"; if (window.history.state?.modal === "archive") window.history.back(); };
 window.onpopstate = () => { if (DOM.archiveModal.style.display === "block") DOM.archiveModal.style.display = "none"; };
-window.clearArchive = () => {}; 
+window.clearArchive = () => {
+  if(!localStorage.getItem("calc_archive")) return;
+  if(confirm("Clear entire history archive?")) {
+     localStorage.removeItem("calc_archive");
+     window.showArchive(); 
+     Utils.vibrate(50);
+  }
+};
 
-// Load & Init
+let eqTimer = null;
+let eqLongPressed = false;
+window.eqPressStart = (e) => { e.preventDefault(); const btn = e.currentTarget; STATE.currentPressedBtn = btn; eqLongPressed = false; eqTimer = setTimeout(() => { eqLongPressed = true; tap(window.resolveInline); Utils.vibrate(50); btn.classList.add("pressed"); }, 400); };
+window.eqPressEnd = (e) => { e.preventDefault(); clearTimeout(eqTimer); if (!eqLongPressed) { tap(window.enter); } if (STATE.currentPressedBtn) { STATE.currentPressedBtn.classList.remove("pressed"); STATE.currentPressedBtn = null; } };
+window.eqPressCancel = () => { clearTimeout(eqTimer); if (STATE.currentPressedBtn) { STATE.currentPressedBtn.classList.remove("pressed"); STATE.currentPressedBtn = null; } };
+
 const saved = localStorage.getItem("billing_calc_history");
 STATE.activeSessionId = localStorage.getItem("active_session_id") || null;
 if (saved) { DOM.history.innerHTML = saved; document.querySelectorAll(".h-row").forEach(enableSwipe); recalculateGrandTotal(); }
