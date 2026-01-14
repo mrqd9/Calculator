@@ -1,5 +1,5 @@
 /*
- * Adding Calculator Pro
+ * Adding Calculator Pro 
  * Copyright (C) 2026 mrqd9
  * Licensed under GNU GPL v3 or later.
  */
@@ -339,19 +339,22 @@ const InputController = {
 
       if (!this.validate(text, char, type, offset)) return false;
 
-      // Operator filtration
-          if (type === 'op' && offset < text.length) {
-          const nextChar = text[offset]; // Character to the right of cursor
-          if (InputController.config.operators.includes(nextChar)) {
+      // FIX: Forward Operator Filtration (Looks ahead including spaces to prevent 5 + + 5)
+      if (type === 'op' && offset < text.length) {
+          const match = text.slice(offset).match(/^\s*([\+\−\×\÷])/); // Find next operator
+          if (match) {
+              const nextOp = match[1];
               let shouldReplaceNext = true;
-              if ((nextChar === '−' || nextChar === '-') && (char !== '−' && char !== '-')) {
+              if ((nextOp === '−' || nextOp === '-') && (char !== '−' && char !== '-')) {
                   shouldReplaceNext = false; 
               }
               if (shouldReplaceNext) {
-                  text = text.slice(0, offset) + text.slice(offset + 1);
+                  // Remove offset chars + matched string length (operator + spaces)
+                  text = text.slice(0, offset) + text.slice(offset + match[0].length);
               }
           }
       }
+
       if (type === 'op') {
           const textBefore = text.slice(0, offset);
           const opBlockRegex = /([\+\−\×\÷])\s*([\+\−\×\÷])?\s*$/;
@@ -399,7 +402,8 @@ const InputController = {
       if (offset === 0) {
       if (type === 'op') {
             if (char !== '−') return false;
-            if (InputController.config.operators.includes(nextChar)) return false;
+            // Check for operator at start including spaces
+            if (/^\s*[\+\−\×\÷]/.test(textAfter)) return false; 
         }
         if (type === 'dot') { this.handle("0", "num"); this.handle(".", "dot"); return false; }
         return true;
@@ -506,7 +510,7 @@ const InputController = {
 
        for (let i = 1; i < segments.length; i++) {
            let result = evaluate(cumulativeExpression); 
-           
+           if (result === "Error") return rawText; // Abort chain on error
            let resultStr = Utils.toBillingString(result);
            if (resultStr.endsWith(".00")) resultStr = resultStr.slice(0, -3);
            
@@ -552,6 +556,11 @@ function parseAndRecalculate(resetCursor = true) {
 
   let currentEval = evaluate();
   
+  if (currentEval === "Error") {
+      DOM.liveTotal.innerText = "= Error";
+      return;
+  }
+  
   let rawFull = DOM.liveInput.innerText.replace(/[, ]/g, "");
   const endsWithResultBlock = /=\s*[−-]?\s*[\d.,]+$/.test(rawFull.trim());
   const showTotal = STATE.tokens.length > 0 && !rawFull.trim().endsWith("=") && !endsWithResultBlock;
@@ -585,6 +594,7 @@ function calculatePercentageValue(t, i, rawTokens) {
           if (!isUnary) {
               let subExprTokens = rawTokens.slice(0, i - 1);
               let runningTotal = evaluate(subExprTokens); 
+              if (runningTotal === "Error") return 0;
               calculatedValue = Utils.cleanNum(runningTotal * (t.rawNum / 100)); 
           }
       }
@@ -611,7 +621,11 @@ function evaluate(sourceTokens = STATE.tokens) {
     .replace(/÷/g, "/")
     .replace(/−/g, "-"); 
     
-  try { return Utils.cleanNum(new Function("return " + exp)()); } catch { return 0; }
+  try { 
+      let res = new Function("return " + exp)(); 
+      if (!isFinite(res) || isNaN(res)) return "Error";
+      return Utils.cleanNum(res);
+  } catch { return "Error"; }
 }
 
 /* =========================================
@@ -666,6 +680,7 @@ window.resolveInline = () => {
   parseAndRecalculate(false); 
   if (STATE.tokens.length === 0) return false;
   let result = evaluate();
+  if (result === "Error") return false;
   
   let rawText = DOM.liveInput.innerText;
   const resultBlocks = rawText.match(/=\s*([−-]?\s*[\d.,]+)/g);
@@ -689,7 +704,10 @@ window.enter = () => {
   let checkText = DOM.liveInput.innerText.trim();
   if (!checkText || /^[\s\+\−\-\×\÷\%\*\/\.]+$/.test(checkText)) return false;
   if (!STATE.tokens.length) return false;
+  
   let result = evaluate();
+  if (result === "Error") return false;
+
   let row = document.createElement("div");
   row.className = "h-row";
   row.dataset.value = result;
@@ -702,8 +720,10 @@ window.enter = () => {
           expText = expText.substring(0, lastEqIndex).trim();
       }
   }
-  expText = expText.replace(/[\s\+\−\×\÷\.\-]+$/, "");
+  expText = expText.replace(/[\s\+\−\×\÷\.\-]+$/, ""); 
+  
   if (!expText) return false;
+
   let resText = Utils.toBillingString(result);
   resText = Utils.formatIN(resText).length > 18 ? Number(result).toExponential(8) : Utils.formatIN(resText);
   row.innerHTML = `<span class="h-exp">${expText} =</span><span class="h-res ${result < 0 ? 'negative' : ''}">${resText}</span><div class="swipe-arrow"></div>`;
