@@ -111,7 +111,6 @@ const InputController = {
     }
   },
 
-  /* --- Cursor Management --- */
   Cursor: {
     ensureFocus() {
       if (document.activeElement !== DOM.liveInput) {
@@ -251,7 +250,6 @@ const InputController = {
     }
   },
 
-  /* --- Math Logic Helper --- */
   Math: {
     tokenize(rawFull) {
         let rawText = rawFull.replace(/[, ]/g, "");
@@ -260,7 +258,6 @@ const InputController = {
         }
         
         let safeText = rawText.replace(/e\+/gi, "EE_PLUS").replace(/e[\-\−]/gi, "EE_MINUS");
-        // Split by operators AND percent
         let parts = safeText.split(/([\+\−\×\÷%])/).map(p => p.trim()).filter(p => p);
 
         let initialTokens = [];
@@ -317,7 +314,6 @@ const InputController = {
     }
   },
 
-  /* --- Insertion Logic --- */
   Insert: {
     handle(char, type) {
       InputController.Cursor.ensureFocus();
@@ -331,7 +327,6 @@ const InputController = {
           offset = text.length;
       }
 
-      // Handle % cleanup (eat trailing operators)
       if (type === 'op' && char === '%' && offset > 0) {
           const trimOps = /[\+\−\×\÷\s]+$/;
           const match = text.slice(0, offset).match(trimOps);
@@ -344,7 +339,19 @@ const InputController = {
 
       if (!this.validate(text, char, type, offset)) return false;
 
-      // Smart Operator Replacement
+      // Operator filtration
+          if (type === 'op' && offset < text.length) {
+          const nextChar = text[offset]; // Character to the right of cursor
+          if (InputController.config.operators.includes(nextChar)) {
+              let shouldReplaceNext = true;
+              if ((nextChar === '−' || nextChar === '-') && (char !== '−' && char !== '-')) {
+                  shouldReplaceNext = false; 
+              }
+              if (shouldReplaceNext) {
+                  text = text.slice(0, offset) + text.slice(offset + 1);
+              }
+          }
+      }
       if (type === 'op') {
           const textBefore = text.slice(0, offset);
           const opBlockRegex = /([\+\−\×\÷])\s*([\+\−\×\÷])?\s*$/;
@@ -358,7 +365,6 @@ const InputController = {
               let replaceBlock = true;
 
               if (!secondOp) {
-                  // If inserting Minus and previous is NOT Minus, allow append
                   if ((char === '−' || char === '-') && firstOp !== '−' && firstOp !== '-') {
                       replaceBlock = false; 
                   }
@@ -462,7 +468,7 @@ const InputController = {
     }
   },
 
-  /* --- Formatting & Logic Engine --- */
+  // Formatting logic and engine
   Format: {
     process(text, desiredCursorPos) {
       let cleanText = text.replace(InputController.config.regex.cleanNum, "");
