@@ -678,7 +678,7 @@ window.resolveInline = () => {
 window.enter = () => {
   parseAndRecalculate(false);
   let checkText = DOM.liveInput.innerText.trim();
-  if (checkText === "−" || checkText === "-") return false;
+  if (!checkText || /^[\+\−\-\×\÷%]+$/.test(checkText)) return false; 
   if (!STATE.tokens.length) return false;
   let result = evaluate();
   let row = document.createElement("div");
