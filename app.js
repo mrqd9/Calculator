@@ -391,7 +391,10 @@ const InputController = {
       }
 
       if (offset === 0) {
-        if (type === 'op' && char !== '−') return false;
+      if (type === 'op') {
+            if (char !== '−') return false;
+            if (InputController.config.operators.includes(nextChar)) return false;
+        }
         if (type === 'dot') { this.handle("0", "num"); this.handle(".", "dot"); return false; }
         return true;
       }
