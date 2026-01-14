@@ -678,7 +678,7 @@ window.resolveInline = () => {
 window.enter = () => {
   parseAndRecalculate(false);
   let checkText = DOM.liveInput.innerText.trim();
-  if (!checkText || /^[\+\−\-\×\÷%]+$/.test(checkText)) return false; 
+  if (!checkText || /^[\s\+\−\-\×\÷\%\*\/\.]+$/.test(checkText)) return false;
   if (!STATE.tokens.length) return false;
   let result = evaluate();
   let row = document.createElement("div");
@@ -693,7 +693,8 @@ window.enter = () => {
           expText = expText.substring(0, lastEqIndex).trim();
       }
   }
-  expText = expText.replace(/[\s\+\−\×\÷\.\-]+$/, ""); 
+  expText = expText.replace(/[\s\+\−\×\÷\.\-]+$/, "");
+  if (!expText) return false;
   let resText = Utils.toBillingString(result);
   resText = Utils.formatIN(resText).length > 18 ? Number(result).toExponential(8) : Utils.formatIN(resText);
   row.innerHTML = `<span class="h-exp">${expText} =</span><span class="h-res ${result < 0 ? 'negative' : ''}">${resText}</span><div class="swipe-arrow"></div>`;
