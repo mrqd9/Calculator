@@ -31,6 +31,7 @@
 | **Delete Row** | **Swipe Left** on any history row. |
 | **Expand Details** | Tap on a row to view the full equation if it's too long. |
 | **Quick Clear Input** | Long press the Backspace (⌫) button. |
+| **Inline Result** | **Long Press Equals (↵ =)** to calculate within the input line for continued expressions. |
 | **Save & Reset** | Tap the **AC** button to archive the current list and start fresh. |
 | **Copy Summary** | Tap the Copy icon to copy the entire list to your clipboard. |
 
