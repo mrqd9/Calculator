@@ -2,55 +2,60 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 ![PWA](https://img.shields.io/badge/PWA-Ready-orange)
-![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Mobile-green)
+![Mobile](https://img.shields.io/badge/Platform-Mobile%20Only-green)
 
-**Adding Calculator Pro** is a high-precision, billing-style web application designed for tallying long lists of numbers with total accuracy. Unlike standard calculators, it focuses on a persistent running history and live grand totals.
+**Adding Calculator Pro** is a specialized **Merchant Calculator** designed for mobile devices. It allows for high-speed tallying of long lists with total accuracy, featuring a paper-tape style history and essential utility tools.
 
 ---
 
 ## 🚀 Key Features
 
-* **Persistent Running History**: Every calculation is logged as a separate row, creating an audit trail of your work.
-* **Live Grand Total**: A real-time summation of all history rows is displayed at the bottom for instant visibility.
-* **🇮🇳 Indian Number System**: Automatically formats numbers with Indian standard comma placement (e.g., `1,00,000.00`).
-* **Session Archive**: Cleared sessions aren't lost; the app stores your last 20 "cleared" lists for later review or restoration.
-* **Interactive UI**: Supports swipe-to-delete gestures for individual rows and tap-to-expand for long equations.
-* **Offline PWA**: Fully functional without an internet connection once installed on your device.
+* **Merchant-Grade Tallying**: Keeps a persistent running history of every calculation, perfect for summing up daily totals or inventory.
+* **Live Grand Total**: A real-time summation of all rows is always visible at the bottom.
+* **Smart Gestures**:
+    * **Swipe Right to Edit**: Made a mistake? Swipe right on a history row to bring the number back into the input field for correction.
+    * **Swipe Left to Delete**: Remove individual entries quickly.
+* **🇮🇳 Indian Number System**: Numbers are automatically formatted for easy reading (e.g., `1,00,000.00`).
+* **📏 Unit Converter**: A built-in tool to handle basic conversions (Length, Area, Weight, etc.) without leaving the app.
+* **Session Archive**: Never lose your data. The app stores your last 20 cleared sessions for easy restoration.
+* **Offline PWA**: Works flawlessly without an internet connection.
 
 ---
 
-## 🛠️ Advanced Controls & Shortcuts
+## 📱 Controls & Shortcuts
 
 | Action | Control |
 | :--- | :--- |
-| **Delete Row** | Swipe Left on the specific history row. |
-| **Expand Equation** | Tap on a row to see full details of long calculations. |
+| **Open Converter** | Tap the **Ruler (📏)** icon in the top action bar. |
+| **Edit Row** | **Swipe Right** on any history row. |
+| **Delete Row** | **Swipe Left** on any history row. |
+| **Expand Details** | Tap on a row to view the full equation if it's too long. |
 | **Quick Clear Input** | Long press the Backspace (⌫) button. |
-| **Archive Session** | Tap the **AC** button to save the current list and reset. |
-| **Copy Summary** | `Ctrl + C` or tap the Copy icon to copy the full list to clipboard. |
-| **Print Report** | `Ctrl + P` or tap the Print icon for a formatted paper summary. |
+| **Save & Reset** | Tap the **AC** button to archive the current list and start fresh. |
+| **Copy Summary** | Tap the Copy icon to copy the entire list to your clipboard. |
+
+---
+
+## 📥 Installation (Mobile)
+
+This app is designed to be installed on your phone for the best experience.
+
+**Android (Chrome) & iOS (Safari):**
+1.  Open the site in your browser.
+2.  Tap the **Share** button (iOS) or **Menu** (Android).
+3.  Select **"Add to Home Screen"**.
+4.  The app will appear in your app drawer and launch in full-screen mode.
+
+> **⚠️ Important Note:** This app works offline using cached data. If you manually perform a **"hard clear"** of your browser cache or site data, you will need an active internet connection to reload the app and fetch the latest updated version.
 
 ---
 
 ## 📦 Technical Specifications
 
-* **Precision Math**: Uses `Number.EPSILON` rounding to prevent floating-point errors in financial calculations.
-* **Stack**: Vanilla JavaScript, CSS3, and HTML5. No heavy frameworks for maximum performance.
-* **Storage**: Uses `localStorage` for data persistence across browser refreshes.
-* **PWA**: Includes a `manifest.json` and Service Worker (`sw.js`) for offline installation.
-
----
-
-## 📥 Installation
-
-### Desktop
-1. Visit the live URL in Chrome or Edge.
-2. Click the "Install" icon in the address bar to use it as a desktop app.
-
-### Mobile (Android/iOS)
-1. Open the site in Safari (iOS) or Chrome (Android).
-2. Tap **"Add to Home Screen"**.
-3. The app will now appear in your app drawer and work offline.
+* **Precision Math**: Uses `Number.EPSILON` rounding to prevent calculation errors.
+* **Mobile-First Design**: Optimized for Portrait mode with thumb-reachable controls.
+* **Storage**: Uses `localStorage` to keep your history safe even if you close the app.
+* **No Tracking**: Your data stays on your device.
 
 ---
 
@@ -58,13 +63,13 @@
 
 **Copyright (C) 2026 mrqd9**.
 
-This project is licensed under the **GNU General Public License v3 (GPL-3.0)**. 
+This project is licensed under the **GNU General Public License v3 (GPL-3.0)**.
 
 ### Why GPL-3.0?
 We believe in open software. This license ensures:
 1.  The code stays free and open-source forever.
 2.  Anyone who modifies this code must share their improvements back with the community.
-3.  Your contributions and our original work are legally protected from being turned into "closed" proprietary software.
+3.  Your contributions and our original work are legally protected.
 
 ---
 

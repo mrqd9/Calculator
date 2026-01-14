@@ -12,6 +12,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
 .btn-action:active { transform: scale(0.85); opacity: 0.7; }
 .btn-action.success { color: #ffffff !important; transform: scale(1.2); }
 
+/* --- MAIN DISPLAY LAYOUT --- */
 .display-container { 
   flex: 1; 
   min-height: 0; 
@@ -22,6 +23,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
   position: relative; 
 }
 
+/* History (Tape) - Sits at the top */
 .history { 
   flex: 1; 
   overflow-y: auto; 
@@ -32,6 +34,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
   gap: 0; 
 }
 
+/* Live Input - Sits at the bottom */
 #live-wrapper {
   padding: 10px;
   min-height: 50px;
@@ -85,7 +88,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
   user-select: none;
 }
 
-/* --- HISTORY ROWS --- */
+/* --- HISTORY ROWS & SWIPE --- */
 .h-row { 
   position: relative; 
   display: flex;  
@@ -126,11 +129,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
 
 .h-row.expanded .h-res { flex: none; padding: 4px 10px; white-space: nowrap; font-size: 18px; }
 
-/* SWIPE UI */
+/* Swipe Backgrounds */
 .h-row::before { content: "Delete"; position: absolute; inset: 0; background: #d32f2f; color: #ede9e7; display: flex; align-items: center; justify-content: flex-end; padding-right: 15px; font-weight: 600; opacity: 0; transition: opacity 0.3s ease; z-index: 1; }
-
 .h-row.edit-mode::before { background: #2e7d32; content: "Edit"; justify-content: flex-start; padding-left: 15px; }
 
+/* Swipe Arrows */
 .swipe-arrow { position: absolute; top: 50%; transform: translateY(-50%); height: 3px; background: #ede9e7; opacity: 0; z-index: 2; transition: opacity 0.3s ease; border-radius: 2px; width: 14px; }
 .swipe-arrow::after, .swipe-arrow::before { content: ''; position: absolute; width: 8px; height: 3px; border-radius: 2px; background: inherit; }
 .h-row.swiping::before, .h-row.swiping .swipe-arrow { opacity: 1; }
@@ -143,6 +146,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
 .h-row.edit-mode .swipe-arrow::before { left: auto; right: -1px; transform-origin: right; transform: rotate(35deg); }
 .h-row.edit-mode .swipe-arrow::after  { left: auto; right: -1px; transform-origin: right; transform: rotate(-35deg); }
 
+/* --- FOOTER & KEYS --- */
 .total-strip { 
   display: flex; 
   flex-direction: column; 
@@ -234,99 +238,156 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
 .btn-key.eq div { display: flex; align-items: center; justify-content: center; gap: 16px; }
 .btn-key svg { width: 36px; height: 36px; pointer-events: none; stroke-width: 3px; }
 
+/* --- MODALS --- */
 .modal { display: none; position: fixed !important; z-index: 99999 !important; left: 0; top: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); pointer-events: auto; }
 .modal-content { background: #f5f5f5; color: #333; margin: 5vh auto; width: 92%; max-height: 85vh; border-radius: 25px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); position: relative; }
 .modal-header { background: #fff; padding: 16px 20px; display: flex; justify-content: space-between; font-weight: 800; border-bottom: 1px solid #ddd; color: #222; }
+
+/* Archive Styles */
 .archive-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
-
 .archive-item { background: #fff; padding: 16px; border-radius: 18px; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-
 .h-card-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(0,0,0,0.1); }
-
 .h-time { font-size: 11px; color: #777; font-weight: 500; }
-
 .card-icon { display: flex; align-items: center; justify-content: center; padding: 5px; background: rgba(0,0,0,0.03); border-radius: 6px; cursor: pointer; }
-
 .card-icon:active { transform: scale(0.9); background: rgba(0,0,0,0.1); }
-
-.archive-data-row { 
-  display: flex !important; 
-  justify-content: space-between !important; 
-  font-size: 16px; 
-  width: 100%;
-  padding: 5px 0;
-  border-bottom: 1px dashed rgba(0,0,0,0.1); 
-}
-.archive-data-row span:nth-child(1) { 
-  flex: 0 0 65% !important; 
-  max-width: 60% !important;
-  text-align: left !important;
-  white-space: pre-wrap !important; 
-  word-wrap: break-word !important;
-  word-break: break-all !important; 
-  overflow-wrap: anywhere !important;
-}
-.archive-data-row span:nth-child(2) { 
-  flex: 0 0 35% !important; 
-  max-width: 40% !important;
-  text-align: right !important;
-  margin-top: auto;
-  white-space: pre-wrap !important;
-  word-wrap: break-word !important;
-  word-break: break-all !important; 
-  overflow-wrap: anywhere !important;
-}
-
+.archive-data-row { display: flex !important; justify-content: space-between !important; font-size: 16px; width: 100%; padding: 5px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); }
+.archive-data-row span:nth-child(1) { flex: 0 0 65% !important; max-width: 60% !important; text-align: left !important; white-space: pre-wrap !important; word-wrap: break-word !important; word-break: break-all !important; overflow-wrap: anywhere !important; }
+.archive-data-row span:nth-child(2) { flex: 0 0 35% !important; max-width: 40% !important; text-align: right !important; margin-top: auto; white-space: pre-wrap !important; word-wrap: break-word !important; word-break: break-all !important; overflow-wrap: anywhere !important; }
 .archive-total-row { border-top: 1px solid #ddd; padding-top: 12px; font-size: 18px; color: #2e7d32; font-weight: 800; display: flex; justify-content: space-between; }
-
 .btn-clear-archive { background: #ff8a80; color: #b71c1c; border: none; padding: 4px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
 .btn-close-modal { background: transparent; border: none; font-size: 28px; color: #666; cursor: pointer; line-height: 1; }
 
 @media print { 
-  html, body, .calc, .display-container, .history { 
-    height: auto !important; min-height: auto !important; overflow: visible !important; 
-    background: #fff !important; color: #000 !important; 
-    border: none !important; border-radius: 0 !important; box-shadow: none !important; 
-    visibility: visible !important; 
-  }
-  .keys, .action-bar, .total-strip, .modal, .caret, .rotation-overlay, .swipe-arrow, #live-wrapper, #custom-cursor { 
-    display: none !important; 
-  }
-  
+  html, body, .calc, .display-container, .history { height: auto !important; min-height: auto !important; overflow: visible !important; background: #fff !important; color: #000 !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; visibility: visible !important; }
+  .keys, .action-bar, .total-strip, .modal, .caret, .rotation-overlay, .swipe-arrow, #live-wrapper, #custom-cursor { display: none !important; }
   .history::before { content: "Summary"; display: block !important; text-align: center; font-size: 26px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-  .h-row { 
-    display: flex !important; 
-    justify-content: space-between !important; 
-    align-items: flex-end !important; 
-    border-bottom: 1px solid #ddd !important; 
-    border-radius: 0 !important; 
-    padding: 8px 0; 
-    page-break-inside: avoid; 
-    transform: none !important; 
-  }
-  .h-exp { 
-    flex: 0 0 70% !important;
-    text-align: right !important; 
-    font-size: 14px; 
-    color: #333 !important; 
-    padding-right: 10px;
-    padding-left: 0 !important;
-    white-space: pre-wrap !important; 
-    word-wrap: break-word !important; 
-    word-break: break-all !important; 
-    overflow: visible !important; 
-  }
-  .h-res { 
-    flex: 0 0 30% !important;
-    text-align: right !important; 
-    font-size: 14px; 
-    font-weight: 700; 
-    color: #000 !important; 
-    white-space: nowrap !important;
-  }
+  .h-row { display: flex !important; justify-content: space-between !important; align-items: flex-end !important; border-bottom: 1px solid #ddd !important; border-radius: 0 !important; padding: 8px 0; page-break-inside: avoid; transform: none !important; }
+  .h-exp { flex: 0 0 70% !important; text-align: right !important; font-size: 14px; color: #333 !important; padding-right: 10px; padding-left: 0 !important; white-space: pre-wrap !important; word-wrap: break-word !important; word-break: break-all !important; overflow: visible !important; }
+  .h-res { flex: 0 0 30% !important; text-align: right !important; font-size: 14px; font-weight: 700; color: #000 !important; white-space: nowrap !important; }
   .history::after { content: "GRAND TOTAL: " attr(data-total); display: block !important; text-align: right; font-size: 22px; font-weight: 900; border-top: 2px solid #000; margin-top: 20px; padding-top: 10px; } 
 }
 
+/* --- CONVERTER STYLES --- */
+.converter-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1; /* Pushes keypad down */
+  height: 100%;
+}
+
+.conv-row {
+  display: flex;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 4px;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.conv-row.input-group {
+  border: 2px solid #4caf50; /* Green border for active input */
+}
+
+.conv-display {
+  flex: 1;
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  padding: 10px;
+  text-align: right; /* Right aligned numbers */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.conv-select, .conv-select-unit {
+  border: none;
+  background: #eee;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #444;
+  outline: none;
+}
+
+.conv-select-unit {
+  height: 40px;
+  background: #e0e0e0;
+  font-weight: 700;
+  color: #333;
+  margin-right: 4px;
+}
+
+.conv-arrow {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end; /* Right align the swap button */
+  padding-right: 10px;
+  margin: 5px 0;
+}
+
+.btn-swap {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0; 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-swap:active {
+  background: #f0f0f0;
+  transform: rotate(180deg) scale(0.9);
+  border-color: #bbb;
+}
+
+/* Custom Converter Keypad */
+.conv-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: auto; /* Pushes to bottom */
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.conv-key {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 10px;
+  padding: 15px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  box-shadow: 0 2px 0 #ddd;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.conv-key:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.conv-key.action {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+/* --- OVERLAYS --- */
 .rotation-overlay { 
   display: none; 
   position: fixed; 
@@ -360,4 +421,4 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
 }
 @media (orientation: landscape) { 
   .rotation-overlay { display: flex; } 
-  }
+}

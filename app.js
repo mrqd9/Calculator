@@ -16,6 +16,15 @@ const DOM = {
   archiveModal: document.getElementById("archive-modal"),
   archiveList: document.getElementById("archive-list"),
   copyBtn: document.getElementById("copy-btn"),
+  
+  // Converter Elements
+  converterModal: document.getElementById("converter-modal"),
+  convCategory: document.getElementById("conv-category"),
+  convFromVal: document.getElementById("conv-from-val"),
+  convToVal: document.getElementById("conv-to-val"),
+  convFromUnit: document.getElementById("conv-from-unit"),
+  convToUnit: document.getElementById("conv-to-unit"),
+
   liveInput: null,
   liveTotal: null,
   customCursor: null,
@@ -881,32 +890,212 @@ const handleWrapperInteraction = (e) => {
   }
 };
 
+/* =========================================
+   UNIT CONVERTER LOGIC (MULTI-CATEGORY)
+   ========================================= */
+
+const CONVERTER = {
+  currentInput: "0",
+  
+  // Conversion Rates (Base units: m, m², kg, L, C)
+  data: {
+    length: {
+      'm': 1, 'km': 1000, 'cm': 0.01, 'mm': 0.001,
+      'in': 0.0254, 'ft': 0.3048, 'yd': 0.9144, 'mi': 1609.34
+    },
+    area: {
+      'm²': 1, 'ha': 10000, 'km²': 1e6, 'sq ft': 0.0929, 
+      'sq in': 0.000645, 'ac': 4046.86
+    },
+    mass: {
+      'kg': 1, 'g': 0.001, 'mg': 1e-6, 'lb': 0.453592, 'oz': 0.0283495
+    },
+    volume: {
+      'L': 1, 'ml': 0.001, 'm³': 1000, 'gal': 3.78541, 'fl oz': 0.02957
+    },
+    temp: { /* Special handling needed for temp */ }
+  },
+  
+  init() {
+    this.populateUnits();
+    
+    // Change Listeners
+    const recalc = () => this.calculate();
+    DOM.convFromUnit.addEventListener("change", recalc);
+    DOM.convToUnit.addEventListener("change", recalc);
+  },
+
+  populateUnits() {
+    const cat = DOM.convCategory.value;
+    
+    // Special case for Temperature (Keys only)
+    let units = cat === 'temp' ? ['C', 'F', 'K'] : Object.keys(this.data[cat]);
+    
+    const createOpts = () => units.map(u => `<option value="${u}">${u}</option>`).join('');
+    
+    DOM.convFromUnit.innerHTML = createOpts();
+    DOM.convToUnit.innerHTML = createOpts();
+    
+    // Smart Defaults
+    if(cat === 'length') { DOM.convFromUnit.value = "m"; DOM.convToUnit.value = "ft"; }
+    else if(cat === 'area') { DOM.convFromUnit.value = "m²"; DOM.convToUnit.value = "sq ft"; }
+    else if(cat === 'mass') { DOM.convFromUnit.value = "kg"; DOM.convToUnit.value = "lb"; }
+    else if(cat === 'volume') { DOM.convFromUnit.value = "L"; DOM.convToUnit.value = "gal"; }
+    else if(cat === 'temp') { DOM.convFromUnit.value = "C"; DOM.convToUnit.value = "F"; }
+    
+    this.calculate();
+  },
+  
+  append(char) {
+    if (this.currentInput === "0" && char !== ".") {
+      this.currentInput = char;
+    } else {
+      if (char === "." && this.currentInput.includes(".")) return;
+      if (this.currentInput.length > 10) return; 
+      this.currentInput += char;
+    }
+    this.updateUI();
+  },
+
+  backspace() {
+    if (this.currentInput.length <= 1) {
+      this.currentInput = "0";
+    } else {
+      this.currentInput = this.currentInput.slice(0, -1);
+    }
+    this.updateUI();
+  },
+
+  updateUI() {
+    DOM.convFromVal.innerText = this.currentInput;
+    this.calculate();
+  },
+  
+  calculate() {
+    const val = parseFloat(this.currentInput);
+    if (isNaN(val)) { DOM.convToVal.innerText = "0"; return; }
+    
+    const cat = DOM.convCategory.value;
+    const fromU = DOM.convFromUnit.value;
+    const toU = DOM.convToUnit.value;
+    let result = 0;
+
+    // Temperature Logic (Non-linear)
+    if (cat === 'temp') {
+      let valInC = val;
+      if (fromU === 'F') valInC = (val - 32) * 5/9;
+      if (fromU === 'K') valInC = val - 273.15;
+      
+      if (toU === 'C') result = valInC;
+      if (toU === 'F') result = (valInC * 9/5) + 32;
+      if (toU === 'K') result = valInC + 273.15;
+    } 
+    else {
+      // Standard Linear Conversion
+      const fromFactor = this.data[cat][fromU];
+      const toFactor = this.data[cat][toU];
+      result = (val * fromFactor) / toFactor;
+    }
+    
+    // Formatting
+    if (Math.abs(result) < 1e-6 && result !== 0 || Math.abs(result) > 1e9) {
+        DOM.convToVal.innerText = result.toExponential(4);
+    } else {
+        DOM.convToVal.innerText = parseFloat(result.toPrecision(8));
+    }
+  }
+};
+
+CONVERTER.init();
+
+// Global Window Functions
+window.showConverter = () => {
+  DOM.converterModal.style.display = "block";
+  window.history.pushState({ modal: "converter" }, "");
+  CONVERTER.currentInput = "1"; 
+  CONVERTER.updateUI();
+  return true;
+};
+
+window.closeConverter = () => {
+  DOM.converterModal.style.display = "none";
+  if (window.history.state?.modal === "converter") window.history.back();
+};
+
+window.switchUnits = () => {
+  const fromU = DOM.convFromUnit.value;
+  const toU = DOM.convToUnit.value;
+  DOM.convFromUnit.value = toU;
+  DOM.convToUnit.value = fromU;
+  CONVERTER.calculate();
+  return true;
+};
+
+window.changeCategory = () => {
+  CONVERTER.populateUnits();
+  CONVERTER.currentInput = "1";
+  CONVERTER.updateUI();
+};
+
+window.convDigit = (d) => { CONVERTER.append(d); };
+window.convBack = () => { CONVERTER.backspace(); };
+
+/* =========================================
+   EVENT LISTENERS & NAVIGATION
+   ========================================= */
+
 DOM.liveWrapper.addEventListener("mousedown", handleWrapperInteraction);
 DOM.liveWrapper.addEventListener("touchstart", handleWrapperInteraction, { passive: true });
 DOM.liveInput.addEventListener("contextmenu", (e) => { e.preventDefault(); return false; });
 DOM.liveInput.addEventListener("focus", () => { DOM.liveWrapper.classList.add("focused"); InputController.Cursor.renderVisual(); });
 DOM.liveInput.addEventListener("blur", () => { DOM.liveWrapper.classList.remove("focused"); InputController.Cursor.renderVisual(); });
 document.addEventListener('selectionchange', () => { if (document.activeElement === DOM.liveInput) { InputController.Cursor.renderVisual(); InputController.Cursor.enforceConstraints(); } });
+
 document.addEventListener('keydown', (e) => {
   const key = e.key; const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && key.toLowerCase() === 'p') { e.preventDefault(); tap(() => window.print()); } 
   else if (ctrl && key.toLowerCase() === 'c') { e.preventDefault(); tap(window.copyToClipboard); } 
   else if (key.toLowerCase() === 'h') { tap(window.showArchive); } 
-  else if (key === 'Escape' || key === 'Delete') { tap(clearAll); }
+  else if (key === 'Escape') { 
+    // Close modals on Escape if open
+    if (DOM.converterModal.style.display === "block") window.closeConverter();
+    else if (DOM.archiveModal.style.display === "block") window.closeArchive();
+    else tap(clearAll); 
+  }
+  else if (key === 'Delete') { tap(clearAll); }
   else if (key === 'Enter') { e.preventDefault(); tap(window.enter); }
   else if (key === '=') { e.preventDefault(); tap(window.resolveInline); }
   if (document.activeElement === DOM.liveInput) { if (key !== 'ArrowLeft' && key !== 'ArrowRight') e.preventDefault(); }
 });
+
 if (DOM.copyBtn) DOM.copyBtn.addEventListener("click", () => tap(window.copyToClipboard));
 document.addEventListener("click", () => { document.querySelectorAll(".h-row.expanded").forEach(r => r.classList.remove("expanded")); });
-window.closeArchive = () => { DOM.archiveModal.style.display = "none"; if (window.history.state?.modal === "archive") window.history.back(); };
-window.onpopstate = () => { if (DOM.archiveModal.style.display === "block") DOM.archiveModal.style.display = "none"; };
+
+/* --- UNIFIED MODAL LOGIC --- */
+
+window.closeArchive = () => { 
+  DOM.archiveModal.style.display = "none"; 
+  if (window.history.state?.modal === "archive") window.history.back(); 
+};
+
 window.clearArchive = () => {
   if(!localStorage.getItem("calc_archive")) return;
   if(confirm("Clear entire history archive?")) {
      localStorage.removeItem("calc_archive");
      window.showArchive(); 
      Utils.vibrate(50);
+  }
+};
+
+// SINGLE, UNIFIED BACK BUTTON HANDLER
+window.onpopstate = () => { 
+  // Close Archive if open
+  if (DOM.archiveModal && DOM.archiveModal.style.display === "block") {
+     DOM.archiveModal.style.display = "none"; 
+  }
+  // Close Converter if open
+  if (DOM.converterModal && DOM.converterModal.style.display === "block") {
+     DOM.converterModal.style.display = "none";
   }
 };
 
