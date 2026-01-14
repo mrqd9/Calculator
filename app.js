@@ -339,19 +339,22 @@ const InputController = {
 
       if (!this.validate(text, char, type, offset)) return false;
 
-      // Operator filtration
-          if (type === 'op' && offset < text.length) {
-          const nextChar = text[offset]; // Character to the right of cursor
-          if (InputController.config.operators.includes(nextChar)) {
+      // Forward Operator Filtration
+      if (type === 'op' && offset < text.length) {
+          const match = text.slice(offset).match(/^\s*([\+\−\×\÷])/);
+          if (match) {
+              const nextOp = match[1];
               let shouldReplaceNext = true;
-              if ((nextChar === '−' || nextChar === '-') && (char !== '−' && char !== '-')) {
+              if ((nextOp === '−' || nextOp === '-') && (char !== '−' && char !== '-')) {
                   shouldReplaceNext = false; 
               }
               if (shouldReplaceNext) {
-                  text = text.slice(0, offset) + text.slice(offset + 1);
+                  // Remove offset chars + matched string length
+                  text = text.slice(0, offset) + text.slice(offset + match[0].length);
               }
           }
       }
+
       if (type === 'op') {
           const textBefore = text.slice(0, offset);
           const opBlockRegex = /([\+\−\×\÷])\s*([\+\−\×\÷])?\s*$/;
