@@ -66,12 +66,6 @@ This app is designed to be installed on your phone for the best experience.
 
 This project is licensed under the **GNU General Public License v3 (GPL-3.0)**.
 
-### Why GPL-3.0?
-We believe in open software. This license ensures:
-1.  The code stays free and open-source forever.
-2.  Anyone who modifies this code must share their improvements back with the community.
-3.  Your contributions and our original work are legally protected.
-
 ---
 
 **Developed with ❤️ by [mrqd9](https://github.com/mrqd9)**
