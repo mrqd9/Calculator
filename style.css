@@ -233,6 +233,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; fon
 .btn-key.num { background: #3d3d3d; color: #e0e0e0; }
 .btn-key.op { background: #3d443d; color: #81c784; }
 .btn-key.ac { background: #d32f2f; color: #e0e0e0; font-size: 30px; font-weight: 700; text-transform: uppercase; }
+.ac-hint { position: absolute; top: 1px; right: 9px; opacity: 0.4; color: #fff; pointer-events: none; }
+.ac-hint svg { width: 20px !important; height: 20px !important; stroke-width: 2px !important; }
 .btn-key.cut { background: #443d3d; color: #d32f2f; }
 .btn-key.eq { grid-column: span 2; background: #2e7d32; color: #eee; font-weight: 700; }
 .btn-key.eq div { display: flex; align-items: center; justify-content: center; gap: 16px; }
