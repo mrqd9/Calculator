@@ -86,7 +86,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg-app
 .h-time { font-size: 11px; color: var(--text-muted); font-weight: 500; }
 .card-icon { display: flex; align-items: center; justify-content: center; padding: 5px; background: rgba(128,128,128,0.1); border-radius: 6px; cursor: pointer; }
 .archive-data-row { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; width: 100%; padding: 6px 0; border-bottom: 1px dashed var(--border-dashed); }
-.archive-data-row span:nth-child(1) { color: var(--text-muted) !important; flex: 1 1 auto; text-align: left; padding-right: 15px; white-space: pre-wrap; word-wrap: break-all; }
+.archive-data-row span:nth-child(1) { color: var(--text-muted) !important; flex: 1 1 0px !important; min-width: 0 !important; text-align: left; padding-right: 15px; white-space: pre-wrap; word-wrap: break-word; word-break: break-all !important; }
 .archive-data-row span:nth-child(2) { color: var(--text-main) !important; flex: 0 0 auto; max-width: 45%; text-align: right; white-space: pre-wrap; word-wrap: break-all; }
 .archive-total-row { border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 18px; color: #4caf50; font-weight: 700; display: flex; justify-content: space-between; }
 .btn-clear-archive { background: rgba(255,59,48,0.1); color: #ff3b30; border: 1px solid #ff3b30; padding: 4px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
