@@ -663,14 +663,14 @@ try {
   STATE.activeSessionId = localStorage.getItem("active_session_id") || null;
   if (saved) { DOM.history.innerHTML = saved; document.querySelectorAll(".h-row").forEach(enableSwipe); recalculateGrandTotal(); }
 } catch (e) {}
+
 setTimeout(() => { InputController.Cursor.ensureFocus(); InputController.Cursor.renderVisual(); }, 100);
 
 (function ThemeSync() {
   const update = (isDark) => {
     isDark ? document.documentElement.removeAttribute('data-theme') : document.documentElement.setAttribute('data-theme', 'light');
+
     setTimeout(() => {
-      const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-app').trim();
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
       document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.setAttribute('content', !isDark ? 'default' : 'black-translucent');
     }, 50);
   };
