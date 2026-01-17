@@ -4,9 +4,9 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#1f1f1f",
-  "theme_color": "#1f1f1f",
-  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
   "icons": [
     {
       "src": "icon-192.png",
@@ -28,7 +28,7 @@
     }
   ],
   "id": "com.mrqd9.addingcalculatorpro",
-  "description": "Professional adding machine with paper-tape history and Indian currency formatting for accurate billing and accounting.",
+  "description": "Adding Calculator Pro is a specialized Merchant Calculator designed for mobile devices. It allows for high-speed tallying of long lists with total accuracy, featuring a paper-tape style history and essential utility tools.",
   "lang": "en",
   "categories": ["finance", "productivity", "utilities", "business"],
   "edge_side_panel": {
@@ -42,12 +42,5 @@
       "form_factor": "narrow",
       "label": "Calculator Main Interface"
     },
-    {
-      "src": "screenshot-history.jpg",
-      "sizes": "1220x2450",
-      "type": "image/jpeg",
-      "form_factor": "narrow",
-      "label": "Calculator History View"
-    }
   ]
 }
