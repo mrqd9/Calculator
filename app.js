@@ -568,7 +568,7 @@ const Cloud = {
   updateUI(user) {
     const btn = document.getElementById("cloud-btn"); if (!btn) return;
     if (user) {
-      btn.style.background = "var(--bg-card)"; btn.style.border = "1px solid #4CAF50";
+      btn.style.background = "var(--bg-card)"; btn.style.border = "1px solid #4CAF50"; btn.style.color = "var(--text-maim)";
       btn.innerHTML = `<span style="color:#4CAF50; font-size:16px;">●</span> ${user.displayName}`;
       btn.onclick = () => { if(confirm("Log out of Google Sync?")) Cloud.logout(); };
     } else {
