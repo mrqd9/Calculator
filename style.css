@@ -42,9 +42,9 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 #live-wrapper.focused #custom-cursor { display: block; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 #live-total { display: inline; color: var(--text-muted); margin-left: 8px; opacity: 0.8; pointer-events: none; user-select: none; }
-.h-row { position: relative; display: flex; align-items: center; min-height: 26px; background: transparent; flex-shrink: 0; transition: all 0.2s; border-top: 1px dashed var(--border-dashed); border-bottom: 1px dashed var(--border-dashed); margin-top: -1px; touch-action: pan-y; cursor: pointer; max-width: 100%; overflow: hidden; }
+.h-row { position: relative; display: flex; justify-content: space-between; align-items: center; min-height: 26px; background: transparent; flex-shrink: 0; transition: all 0.2s; border-top: 1px dashed var(--border-dashed); border-bottom: 1px dashed var(--border-dashed); margin-top: -1px; touch-action: pan-y; cursor: pointer; max-width: 100%; overflow: hidden; }
 .h-exp { flex: 0 0 60%; font-size: 18px; font-weight: 600; color: var(--text-muted); text-align: right; padding-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.h-lbl { color: #4caf50; margin-right: 6px; font-size: 14px; font-weight: 500; display: inline-block; vertical-align: middle; position: absolute; left: 10px; }
+.h-lbl { color: #4caf50; margin-right: 6px; font-size: 14px; font-weight: 500; display: inline-block; float: left; vertical-align: middle; }
 .h-lbl::after { content: "|"; margin-left: 4px; color: var(--text-muted); opacity: 0.5; }
 .h-res { flex: 0 0 40%; font-size: 18px; font-weight: 700; color: var(--text-display); text-align: right; padding-right: 10px; overflow: hidden; white-space: nowrap; }
 .negative { color: #ff5252 !important; } [data-theme="light"] .negative { color: #d32f2f !important; }
